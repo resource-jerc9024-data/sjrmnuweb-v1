@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Panel SJR MNU</title>
+  <link rel="stylesheet" href="../../handler/styles.css" />
+  <link rel="icon" type="image/x-icon" href="../../favicon.ico" />
+  <style>
+    body { min-height:100vh; background: radial-gradient(1200px 600px at 20% -10%, #7c3aed22, transparent), radial-gradient(1000px 500px at 120% 10%, #06b6d422, transparent), linear-gradient(180deg, #0b1020, #0f172a); color:#e5e7eb; }
+    .admin-shell { min-height:100vh; display:flex; flex-direction:column; }
+    /* Hide app until auth state is known to prevent flash */
+    body.auth-pending .admin-shell { display:none; }
+    .topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 20px; backdrop-filter: blur(8px); background:rgba(15,23,42,.45); border-bottom:1px solid #1f2937; position:sticky; top:0; z-index:10; }
+    .brand { display:flex; align-items:center; gap:10px; }
+    .brand .logo { width:56px; height:56px; border-radius:12px; object-fit:cover; background:#fff; box-shadow: 0 10px 28px rgba(158,240,26,.20); }
+    .brand .title { margin:0; font-size:16px; color:#f8fafc; letter-spacing:.3px; }
+    .content { max-width:1100px; width:100%; margin:24px auto; padding:0 20px; }
+    .card { background:rgba(17, 24, 39, 0.7); border:1px solid #1f2937; border-radius:16px; box-shadow: 0 20px 60px rgba(0,0,0,.45); padding:18px; }
+    .toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:12px 0 8px 0; }
+    .searchbar { flex:1; min-width:260px; background:#0b1220; border:1px solid #1f2937; color:#e5e7eb; border-radius:10px; padding:10px 12px; outline:none; }
+    .table-wrap { overflow:auto; border:1px solid #1f2937; border-radius:12px; }
+    .table { width:100%; border-collapse: separate; border-spacing:0; }
+    .table thead th { position:sticky; top:0; background:#0b1220; color:#cbd5e1; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid #1f2937; padding:10px 12px; }
+    .table tbody td { border-bottom:1px solid #0f1a2e; padding:10px 12px; font-size:14px; color:#e5e7eb; }
+    .muted { color:#94a3b8; font-size:12px; }
+    .nowrap { white-space:nowrap; }
+    .details { padding:16px; background:#0b1220; border:1px solid #1f2937; border-radius:12px; margin-top:14px; }
+    :root{ --neo:#9ef01a; --neo-dark:#9ef01a; }
+    .btn { border-radius:10px; transition:.2s transform, .2s box-shadow, .2s background-color, .2s border-color, .2s color; }
+    .btn.primary, .btn { background:linear-gradient(135deg, var(--primary, var(--neo)), var(--primary-strong, #b9ff2b)); border:none; color:#0b1220; font-weight:600; box-shadow:0 10px 24px rgba(158,240,26,.18); }
+    .btn.primary:hover, .btn:hover { transform: translateY(-1px); box-shadow:0 14px 32px rgba(158,240,26,.28); }
+    .btn.ghost { background:transparent; border:1px solid var(--primary, var(--neo)); color:var(--primary, var(--neo)); }
+    .btn.ghost:hover { background:rgba(158,240,26,.08); border-color:var(--primary, var(--neo)); color:#eaffb8; }
+    .modal-overlay { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.5); z-index:50; padding:20px; }
+    .modal { width:100%; max-width:720px; background:#0b1220; border:1px solid #1f2937; border-radius:14px; box-shadow:0 30px 80px rgba(0,0,0,.6); }
+    .modal-head { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid #1f2937; }
+    .modal-body { padding:14px 16px; max-height:70vh; overflow:auto; }
+    .kv { display:grid; grid-template-columns: 180px 1fr; gap:10px; }
+    .kv .k { color:#94a3b8; }
+  </style>
+</head>
+<body class="auth-pending">
+  <div class="admin-shell">
+    <div class="topbar">
+      <div class="brand">
+        <img class="logo" src="../../images/logo.png" alt="SJR MUN" />
+        <h1 class="title">Admin Panel</h1>
+      </div>
+      <div>
+        <button id="logoutBtn" class="btn ghost">Logout</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="card">
+        <div class="toolbar">
+          <input id="searchInput" class="searchbar" type="text" placeholder="Search by form number, name, email, or phone" />
+          <button id="refreshBtn" class="btn ghost">Refresh</button>
+          <button id="exportXlsxBtn" class="btn ghost">Export Excel</button>
+          <button id="exportPdfAllBtn" class="btn">Export All PDF</button>
+        </div>
+
+        <div class="muted">Path: DB/records/{form-number}</div>
+
+        <div class="table-wrap">
+          <table class="table" id="recordsTable">
+            <thead>
+              <tr>
+                <th class="nowrap">Form #</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Category</th>
+                <th class="nowrap">Created</th>
+                <th class="nowrap">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="recordsTbody"></tbody>
+          </table>
+        </div>
+
+        <div id="detailsPanel" class="details hidden"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer elevated" style="--footer-margin-top:40px; --footer-margin-bottom:80px; --footer-padding-bottom:22px;">
+    <small>Designed for SJR MUN CLUB</small>
+    <br />
+    <span class="footer-credits">Website by <strong><a class="credit-link" href="https://works.onpratiks.com" target="_blank" rel="noopener noreferrer">Pratik</a></strong> © <span id="currentYear"></span></span>
+    <div class="footer-bar">
+      <div class="left">
+        <a class="social-btn" href="https://www.instagram.com/sjrmun" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+            <path fill="currentColor" d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7zm5 3.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11zm0 2a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm5.75-.75a1.25 1.25 0 1 1-2.5 0 1.25 1.25 0 0 1 2.5 0z"/>
+          </svg>
+          <span>Instagram</span>
+        </a>
+      </div>
+      <div class="right">
+        <a class="social-btn admin" href="../../" aria-label="Home" style="background:transparent; border:1px solid var(--primary); color:var(--primary); box-shadow:none;">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 9.5 12 3l9 6.5V21a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z"/></svg>
+          <span>Home</span>
+        </a>
+        <a class="social-btn admin" href="../../formview" aria-label="Form View">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path fill="currentColor" d="M6 2h7l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm7 1.5V8h4.5L13 3.5zM8 11h8v1.5H8V11zm0 3h8v1.5H8V14zm0 3h5v1.5H8V17z"/></svg>
+          <span>Form View</span>
+        </a>
+      </div>
+    </div>
+  </footer>
+  <script>
+    (function(){
+      const y = document.getElementById('currentYear');
+      if (y) y.textContent = new Date().getFullYear();
+      const fc = document.querySelector('.footer-credits');
+      if (fc) fc.style.transform = 'translateY(-2px)';
+    })();
+  </script>
+
+  <div id="detailModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="modalTitle" style="margin:0;">Applicant Details</h3>
+        <button id="closeModalBtn" class="btn ghost">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="modalKV" class="kv"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.env = {
+      FIREBASE_API_KEY: window.FIREBASE_API_KEY || "",
+      FIREBASE_AUTH_DOMAIN: window.FIREBASE_AUTH_DOMAIN || "",
+      FIREBASE_PROJECT_ID: window.FIREBASE_PROJECT_ID || "",
+      FIREBASE_STORAGE_BUCKET: window.FIREBASE_STORAGE_BUCKET || "",
+      FIREBASE_MESSAGING_SENDER_ID: window.FIREBASE_MESSAGING_SENDER_ID || "",
+      FIREBASE_APP_ID: window.FIREBASE_APP_ID || ""
+    };
+  </script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+    import { getFirestore, collection, getDocs, query, orderBy, Timestamp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+    import { jsPDF } from "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.es.min.js";
+    import * as XLSX from "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
+
+    const cfg = {
+      apiKey: window.env.FIREBASE_API_KEY,
+      authDomain: window.env.FIREBASE_AUTH_DOMAIN,
+      projectId: window.env.FIREBASE_PROJECT_ID,
+      storageBucket: window.env.FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: window.env.FIREBASE_MESSAGING_SENDER_ID,
+      appId: window.env.FIREBASE_APP_ID,
+    };
+    const app = initializeApp(cfg);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const tbody = document.getElementById('recordsTbody');
+    const details = document.getElementById('detailsPanel');
+    const searchInput = document.getElementById('searchInput');
+
+    let allRecords = [];
+
+    let __authResolved = false;
+    onAuthStateChanged(auth, (user) => {
+      __authResolved = true;
+      if (!user) {
+        // Keep hidden to avoid content flash
+        window.location.replace('login.html');
+        return;
+      }
+      // Auth OK, reveal UI
+      document.body.classList.remove('auth-pending');
+      loadRecords();
+    });
+
+    // Fallback: if auth does not resolve quickly (e.g., SDK blocked/misconfigured), redirect
+    setTimeout(() => {
+      if (!__authResolved) {
+        window.location.replace('login.html');
+      }
+    }, 1200);
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await signOut(auth);
+      window.location.href = 'login.html';
+    });
+
+    document.getElementById('refreshBtn').addEventListener('click', loadRecords);
+
+    searchInput.addEventListener('input', () => renderRows(filterRecords(searchInput.value)));
+
+    function filterRecords(q) {
+      q = (q || '').toLowerCase().trim();
+      if (!q) return allRecords;
+      return allRecords.filter(r =>
+        (r.form_number || '').toLowerCase().includes(q) ||
+        (r.full_name || '').toLowerCase().includes(q) ||
+        (r.email || '').toLowerCase().includes(q) ||
+        (r.phone || '').toLowerCase().includes(q)
+      );
+    }
+
+    async function loadRecords() {
+      tbody.innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
+      const qy = query(collection(db, 'records'));
+      const snap = await getDocs(qy);
+      allRecords = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderRows(allRecords);
+    }
+
+    function renderRows(rows) {
+      tbody.innerHTML = '';
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="7">No records</td></tr>';
+        return;
+      }
+      for (const r of rows) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="nowrap">${r.form_number || r.id}</td>
+          <td>${escapeHtml(r.full_name)}</td>
+          <td>${escapeHtml(r.email)}</td>
+          <td>${escapeHtml(r.phone)}</td>
+          <td>${escapeHtml(r.category)}</td>
+          <td class="nowrap">${formatDate(r.created_at)}</td>
+          <td class="nowrap">
+            <button class="btn ghost" data-view="${r.id}">View</button>
+            <button class="btn" data-pdf="${r.id}">PDF</button>
+          </td>`;
+        tbody.appendChild(tr);
+      }
+
+      tbody.querySelectorAll('[data-view]').forEach(btn => btn.addEventListener('click', (e) => {
+        const id = e.currentTarget.getAttribute('data-view');
+        const rec = allRecords.find(x => x.id === id);
+        showDetails(rec);
+      }));
+
+      tbody.querySelectorAll('[data-pdf]').forEach(btn => btn.addEventListener('click', (e) => {
+        const id = e.currentTarget.getAttribute('data-pdf');
+        const rec = allRecords.find(x => x.id === id);
+        downloadRecordPdf(rec);
+      }));
+    }
+
+    function escapeHtml(s='') {
+      return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    }
+
+    function formatDate(ts) {
+      try {
+        if (ts && ts.toDate) return ts.toDate().toLocaleString();
+      } catch {}
+      return '';
+    }
+
+    function showDetails(r) {
+      if (!r) return;
+      details.classList.remove('hidden');
+      details.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+          <h3 style="margin:0;">Form #${escapeHtml(r.form_number || r.id)}</h3>
+          <div>
+            <button class="btn" id="detailPdfBtn">Download PDF</button>
+            <button class="btn ghost" id="viewMoreBtn">View More</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px;">
+          ${detailRow('Full Name', r.full_name)}
+          ${detailRow("Father's Name", r.father_name)}
+          ${detailRow("Mother's Name", r.mother_name)}
+          ${detailRow('Gender', r.gender)}
+          ${detailRow('DOB', r.dob)}
+          ${detailRow('Institute', r.institute)}
+          ${detailRow('Class', r.class)}
+          ${detailRow('Section', r.section)}
+          ${detailRow('Phone', r.phone)}
+          ${detailRow('Email', r.email)}
+          ${detailRow('Address', r.address)}
+          ${detailRow('Landmark', r.landmark)}
+          ${detailRow('City', r.city)}
+          ${detailRow('Category', r.category)}
+          ${detailRow('Created', formatDate(r.created_at))}
+        </div>`;
+      document.getElementById('detailPdfBtn').onclick = () => downloadRecordPdf(r);
+      document.getElementById('viewMoreBtn').onclick = () => openDetailModal(r);
+    }
+
+    function detailRow(label, value) {
+      return `<div><div class="muted">${escapeHtml(label)}</div><div>${escapeHtml(value||'')}</div></div>`;
+    }
+
+    function recordToLines(r) {
+      return [
+        ['Form #', r.form_number || r.id],
+        ['Full Name', r.full_name],
+        ["Father's Name", r.father_name],
+        ["Mother's Name", r.mother_name],
+        ['Gender', r.gender],
+        ['DOB', r.dob],
+        ['Institute', r.institute],
+        ['Class', r.class],
+        ['Section', r.section],
+        ['Phone', r.phone],
+        ['Email', r.email],
+        ['Address', r.address],
+        ['Landmark', r.landmark],
+        ['City', r.city],
+        ['Category', r.category],
+        ['Created', formatDate(r.created_at)],
+      ];
+    }
+
+    function openDetailModal(r) {
+      const overlay = document.getElementById('detailModal');
+      const modalKV = document.getElementById('modalKV');
+      const title = document.getElementById('modalTitle');
+      title.textContent = `Applicant – Form #${r.form_number || r.id}`;
+      const rows = recordToLines(r);
+      modalKV.innerHTML = rows.map(([k,v]) => `<div class="k">${escapeHtml(k)}</div><div>${escapeHtml(v||'')}</div>`).join('');
+      overlay.style.display = 'flex';
+    }
+
+    document.getElementById('closeModalBtn').addEventListener('click', () => {
+      document.getElementById('detailModal').style.display = 'none';
+    });
+
+    document.getElementById('detailModal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
+    });
+
+    function downloadRecordPdf(r) {
+      const doc = new jsPDF();
+      let y = 14;
+      doc.setFontSize(16); doc.text(`SJR MUN Registration`, 14, y); y += 8;
+      doc.setFontSize(12); doc.text(`Form # ${r.form_number || r.id}`, 14, y); y += 8;
+      doc.setDrawColor(200); doc.line(14, y, 196, y); y += 6;
+      doc.setFontSize(11);
+      for (const [k,v] of recordToLines(r)) {
+        const lines = doc.splitTextToSize(`${k}: ${v||''}`, 182);
+        doc.text(lines, 14, y); y += 6 + (lines.length-1)*5;
+        if (y > 280) { doc.addPage(); y = 14; }
+      }
+      doc.save(`form_${r.form_number || r.id}.pdf`);
+    }
+
+    document.getElementById('exportPdfAllBtn').addEventListener('click', () => {
+      if (!allRecords.length) return alert('No data');
+      const doc = new jsPDF();
+      let y = 14;
+      doc.setFontSize(16); doc.text('All Registrations', 14, y); y += 8;
+      doc.setDrawColor(200); doc.line(14, y, 196, y); y += 6;
+      for (const r of allRecords) {
+        doc.setFontSize(12); doc.text(`Form # ${r.form_number || r.id} - ${r.full_name||''}`, 14, y); y += 6;
+        doc.setFontSize(10);
+        const lines = recordToLines(r);
+        for (const [k,v] of lines) {
+          const wrapped = doc.splitTextToSize(`${k}: ${v||''}`, 182);
+          doc.text(wrapped, 14, y); y += 5 + (wrapped.length-1)*4;
+          if (y > 270) { doc.addPage(); y = 14; }
+        }
+        y += 4; doc.setDrawColor(230); doc.line(14, y, 196, y); y += 6;
+        if (y > 270) { doc.addPage(); y = 14; }
+      }
+      doc.save('all_registrations.pdf');
+    });
+
+    // CSV export removed per requirements
+
+    document.getElementById('exportXlsxBtn').addEventListener('click', () => {
+      if (!allRecords.length) return alert('No data');
+      const data = allRecords.map(r => ({
+        form_number: r.form_number || r.id,
+        full_name: r.full_name,
+        father_name: r.father_name,
+        mother_name: r.mother_name,
+        gender: r.gender,
+        dob: r.dob,
+        institute: r.institute,
+        class: r.class,
+        section: r.section,
+        phone: r.phone,
+        email: r.email,
+        address: r.address,
+        landmark: r.landmark,
+        city: r.city,
+        category: r.category,
+        created_at: formatDate(r.created_at)
+      }));
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Registrations');
+      XLSX.writeFile(wb, 'registrations.xlsx');
+    });
+  </script>
+</body>
+</html>

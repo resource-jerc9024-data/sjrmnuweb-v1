@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SJR MNU View / Download Your Form</title>
+  <link rel="stylesheet" href="../handler/styles.css" />
+  <link rel="icon" type="image/x-icon" href="../favicon.ico" />
+  <style>
+    body { min-height:100vh; background: radial-gradient(1200px 600px at 20% -10%, #7c3aed22, transparent), radial-gradient(1000px 500px at 120% 10%, #06b6d422, transparent), linear-gradient(180deg, #0b1020, #0f172a); color:#e5e7eb; }
+    .view-shell { display:grid; place-items:center; min-height:auto; padding:24px; }
+    .view-card { width:100%; max-width:820px; background:rgba(17, 24, 39, 0.7); backdrop-filter: blur(8px); border:1px solid #1f2937; border-radius:16px; box-shadow: 0 20px 60px rgba(0,0,0,.45); padding:22px; }
+    .header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; }
+    .header .title { margin:0; font-size:20px; color:#f8fafc; }
+    .form .field span { color:#cbd5e1; }
+    .form input, .form select { background:#0b1220; border:1px solid #1f2937; color:#e5e7eb; border-radius:10px; padding:12px 12px; outline:none; transition:.2s border-color, .2s box-shadow; }
+    .form input:focus, .form select:focus { border-color:#6366f1; box-shadow:0 0 0 4px #6366f11f; }
+    .actions { gap:10px; }
+    .btn { border-radius:10px; }
+    .btn.primary, .btn { background:linear-gradient(135deg, var(--primary, #9ef01a), var(--primary-strong, #b9ff2b)); border:none; color:#0b1220; box-shadow:0 10px 24px rgba(158,240,26,.18); }
+    .btn.ghost { background:#111827; border:1px solid #1f2937; color:#cbd5e1; }
+    #matches .field span { color:#cbd5e1; }
+    .kv { display:grid; grid-template-columns: 180px 1fr; gap:10px; }
+    .kv .k { color:#94a3b8; }
+    .hidden { display:none; }
+    #result { margin-top:16px; padding:16px; background:#0b1220; border:1px solid #1f2937; border-radius:12px; }
+  </style>
+</head>
+<body>
+  <div class="view-shell">
+    <div class="view-card">
+      <div class="header">
+        <h2 class="title">Find Your Registration</h2>
+      </div>
+      <form id="lookupForm" class="form" novalidate>
+        <div class="grid">
+          <label class="field">
+            <span>Search By</span>
+            <select name="search_by" id="searchBy">
+              <option value="form_number" selected>Form Number</option>
+              <option value="email">Email</option>
+              <option value="phone">Phone</option>
+            </select>
+          </label>
+          <label class="field" id="fieldFormNumber">
+            <span>Form Number</span>
+            <input type="text" name="form_number" placeholder="e.g. 000123" />
+          </label>
+          <label class="field hidden" id="fieldEmail">
+            <span>Email</span>
+            <input type="email" name="email" placeholder="you@example.com" />
+          </label>
+          <label class="field hidden" id="fieldPhone">
+            <span>Phone</span>
+            <input type="tel" name="phone" inputmode="numeric" placeholder="10-digit phone" pattern="[0-9]{10}" />
+          </label>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn primary">Search</button>
+        </div>
+      </form>
+
+      <div id="matches" class="hidden" style="margin-top:12px;">
+        <label class="field">
+          <span>Select Your Form</span>
+          <select id="matchSelect"></select>
+        </label>
+      </div>
+
+      <div id="result" class="hidden">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+          <h3 style="margin:0;">Form Details</h3>
+          <div>
+            <button id="downloadPdfBtn" class="btn">Download PDF</button>
+          </div>
+        </div>
+        <div id="kvPanel" class="kv" style="margin-top:12px;"></div>
+      </div>
+    </div>
+  </div>
+  
+  <footer class="footer elevated" style="--footer-margin-top:300px; --footer-margin-bottom:80px; --footer-padding-bottom:22px;">
+    <small>Designed for SJR MUN CLUB</small>
+    <br />
+    <span class="footer-credits">Website by <strong><a class="credit-link" href="https://works.onpratiks.com" target="_blank" rel="noopener noreferrer">Pratik</a></strong> © <span id="currentYear"></span></span>
+    <div class="footer-bar">
+      <div class="left">
+        <a class="social-btn" href="https://www.instagram.com/sjrmun" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+            <path fill="currentColor" d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7zm5 3.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11zm0 2a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm5.75-.75a1.25 1.25 0 1 1-2.5 0 1.25 1.25 0 0 1 2.5 0z"/>
+          </svg>
+          <span>Instagram</span>
+        </a>
+      </div>
+      <div class="right" style="display:flex; gap:12px; align-items:center;">
+        <a class="social-btn admin" href="../" aria-label="Home" style="background:transparent; border:1px solid var(--primary); color:var(--primary); box-shadow:none;">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 9.5 12 3l9 6.5V21a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z"/></svg>
+          <span>Home</span>
+        </a>
+        <a class="social-btn admin" href="../admin" aria-label="Admin Panel">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 8.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zm9 3.5c0-.5-.04-.98-.12-1.45l2.02-1.57-2-3.46-2.44 1a8.9 8.9 0 0 0-2.51-1.45l-.37-2.6H10.4l-.37 2.6c-.9.3-1.74.75-2.51 1.45l-2.44-1-2 3.46 2.02 1.57c-.08.47-.12.95-.12 1.45s.04.98.12 1.45L1.08 15l2 3.46 2.44-1c.77.7 1.61 1.15 2.51 1.45l.37 2.6h3.68l.37-2.6c.9-.3 1.74-.75 2.51-1.45l2.44 1 2-3.46-2.02-1.57c.08-.47.12-.95.12-1.45z"/></svg>
+          <span>Admin Panel</span>
+        </a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function(){
+      const el = document.getElementById('currentYear');
+      if (el) el.textContent = new Date().getFullYear();
+    })();
+  </script>
+  <script>
+    window.env = {
+      FIREBASE_API_KEY: window.FIREBASE_API_KEY || "",
+      FIREBASE_AUTH_DOMAIN: window.FIREBASE_AUTH_DOMAIN || "",
+      FIREBASE_PROJECT_ID: window.FIREBASE_PROJECT_ID || "",
+      FIREBASE_STORAGE_BUCKET: window.FIREBASE_STORAGE_BUCKET || "",
+      FIREBASE_MESSAGING_SENDER_ID: window.FIREBASE_MESSAGING_SENDER_ID || "",
+      FIREBASE_APP_ID: window.FIREBASE_APP_ID || ""
+    };
+  </script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+    import { jsPDF } from "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.es.min.js";
+
+    const cfg = {
+      apiKey: window.env.FIREBASE_API_KEY,
+      authDomain: window.env.FIREBASE_AUTH_DOMAIN,
+      projectId: window.env.FIREBASE_PROJECT_ID,
+      storageBucket: window.env.FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: window.env.FIREBASE_MESSAGING_SENDER_ID,
+      appId: window.env.FIREBASE_APP_ID,
+    };
+    const app = initializeApp(cfg);
+    const db = getFirestore(app);
+
+    const form = document.getElementById('lookupForm');
+    const result = document.getElementById('result');
+    const kvPanel = document.getElementById('kvPanel');
+    const searchBy = document.getElementById('searchBy');
+    const fieldFormNumber = document.getElementById('fieldFormNumber');
+    const fieldEmail = document.getElementById('fieldEmail');
+    const fieldPhone = document.getElementById('fieldPhone');
+    const matches = document.getElementById('matches');
+    const matchSelect = document.getElementById('matchSelect');
+    const inputForm = fieldFormNumber.querySelector('input');
+    const inputEmail = fieldEmail.querySelector('input');
+    const inputPhone = fieldPhone.querySelector('input');
+
+    let currentRecord = null;
+    let currentMatches = [];
+
+    function setActive(el, active) {
+      if (active) {
+        el.disabled = false;
+        el.required = true;
+        el.setAttribute('name', 'query');
+        el.id = 'queryInput';
+      } else {
+        el.disabled = true;
+        el.required = false;
+        el.removeAttribute('name');
+        if (el.id === 'queryInput') el.id = '';
+      }
+    }
+
+    function updateInputs() {
+      const mode = searchBy.value;
+      fieldFormNumber.classList.toggle('hidden', mode !== 'form_number');
+      fieldEmail.classList.toggle('hidden', mode !== 'email');
+      fieldPhone.classList.toggle('hidden', mode !== 'phone');
+
+      setActive(inputForm, mode === 'form_number');
+      setActive(inputEmail, mode === 'email');
+      setActive(inputPhone, mode === 'phone');
+
+      matches.classList.add('hidden');
+      result.classList.add('hidden');
+      kvPanel.innerHTML = '';
+    }
+    updateInputs();
+    searchBy.addEventListener('change', updateInputs);
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const mode = String(fd.get('search_by'));
+      const queryInput = document.getElementById('queryInput');
+      const q = String(queryInput ? queryInput.value : '').trim();
+      try {
+        if (mode === 'form_number') {
+          if (!q) return alert('Enter form number.');
+          const id = String(q).padStart(6, '0');
+          const snap = await getDoc(doc(db, 'records', id));
+          if (!snap.exists()) return alert('No record found for that form number.');
+          currentRecord = { id, ...snap.data() };
+          showRecord(currentRecord);
+        } else if (mode === 'email') {
+          if (!q) return alert('Enter email.');
+          const qy = query(collection(db, 'records'), where('email','==', q));
+          const snaps = await getDocs(qy);
+          handleMatches(snaps);
+        } else if (mode === 'phone') {
+          if (!q) return alert('Enter phone.');
+          const qy = query(collection(db, 'records'), where('phone','==', q));
+          const snaps = await getDocs(qy);
+          handleMatches(snaps);
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Failed to load record. Try again.');
+      }
+    });
+
+    function handleMatches(snaps) {
+      currentMatches = snaps.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (!currentMatches.length) {
+        matches.classList.add('hidden');
+        result.classList.add('hidden');
+        alert('No matching records found.');
+        return;
+      }
+      if (currentMatches.length === 1) {
+        currentRecord = currentMatches[0];
+        showRecord(currentRecord);
+        matches.classList.add('hidden');
+        return;
+      }
+      // multiple: let user choose specific form
+      matchSelect.innerHTML = currentMatches.map(r => `<option value="${r.id}">${r.id} - ${escapeHtml(r.full_name||'')}</option>`).join('');
+      matches.classList.remove('hidden');
+      result.classList.add('hidden');
+    }
+
+    matchSelect.addEventListener('change', () => {
+      const id = matchSelect.value;
+      const rec = currentMatches.find(r => r.id === id);
+      if (rec) {
+        currentRecord = rec;
+        showRecord(currentRecord);
+      }
+    });
+
+    function showRecord(r) {
+      result.classList.remove('hidden');
+      const entries = [
+        ['Form #', r.form_number || r.id],
+        ['Full Name', r.full_name],
+        ["Father's Name", r.father_name],
+        ["Mother's Name", r.mother_name],
+        ['Gender', r.gender],
+        ['DOB', r.dob],
+        ['Institute', r.institute],
+        ['Class', r.class],
+        ['Section', r.section],
+        ['Phone', r.phone],
+        ['Email', r.email],
+        ['Address', r.address],
+        ['Landmark', r.landmark],
+        ['City', r.city],
+        ['Category', r.category]
+      ];
+      kvPanel.innerHTML = entries.map(([k,v]) => `
+        <div class="k">${escapeHtml(k)}</div>
+        <div>${escapeHtml(v||'')}</div>
+      `).join('');
+    }
+
+    function escapeHtml(s='') { return s.replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c])); }
+
+    document.getElementById('downloadPdfBtn').addEventListener('click', () => {
+      if (!currentRecord) return;
+      const r = currentRecord;
+      const doc = new jsPDF();
+      let y = 14;
+      doc.setFontSize(16); doc.text(`SJR MUN Registration`, 14, y); y += 8;
+      doc.setFontSize(12); doc.text(`Form # ${r.form_number || r.id}`, 14, y); y += 8;
+      doc.setDrawColor(200); doc.line(14, y, 196, y); y += 6;
+      doc.setFontSize(11);
+      const pairs = [
+        ['Full Name', r.full_name],
+        ["Father's Name", r.father_name],
+        ["Mother's Name", r.mother_name],
+        ['Gender', r.gender],
+        ['DOB', r.dob],
+        ['Institute', r.institute],
+        ['Class', r.class],
+        ['Section', r.section],
+        ['Phone', r.phone],
+        ['Email', r.email],
+        ['Address', r.address],
+        ['Landmark', r.landmark],
+        ['City', r.city],
+        ['Category', r.category]
+      ];
+      for (const [k,v] of pairs) {
+        const lines = doc.splitTextToSize(`${k}: ${v||''}`, 182);
+        doc.text(lines, 14, y); y += 6 + (lines.length-1)*5;
+        if (y > 280) { doc.addPage(); y = 14; }
+      }
+      doc.save(`form_${r.form_number || r.id}.pdf`);
+    });
+  </script>
+</body>
+</html>
