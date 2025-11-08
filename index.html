@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>SJR MUN Registration</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="handler/styles.css" />
+  <!-- AOS (Animate On Scroll) for subtle motion -->
+  <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css" />
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  <style>
+    .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:#0b1220;border:1px solid #1f2937;color:#e5e7eb;border-radius:12px;padding:12px 14px;box-shadow:0 20px 50px rgba(0,0,0,.5);display:flex;align-items:center;gap:12px;min-width:260px;z-index:1000;transition:.25s opacity,.25s transform}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+    .toast.success{border-color:rgba(158,240,26,.5)}
+    .toast.error{border-color:#7f1d1d}
+  </style>
+  
+</head>
+<body>
+  <main class="page">
+    <!-- Scroll Sequence Section -->
+    <section class="scroll-section" id="hero" data-aos="fade-up" data-aos-delay="60">
+      <div class="progress-bar" aria-hidden="true"></div>
+      <div class="image-counter"><span id="currentImage">1</span>/<span id="totalImages">3</span></div>
+      <div id="imageContainer" aria-live="polite" aria-label="Scroll image sequence"></div>
+      <div class="scroll-indicator" role="button" tabindex="0" aria-label="Skip slides and go to the registration form">
+        <div class="scroll-text">Scroll</div>
+        <div class="scroll-arrow" aria-hidden="true"></div>
+      </div>
+    </section>
+
+    <header class="hero" data-aos="fade-down">
+      <h1 class="title glow-title" data-aos="zoom-in">SJR MUN REGISTRATION FORM</h1>
+    </header>
+
+    <section class="form-wrap" data-aos="fade-up" data-aos-delay="120">
+      <h2 class="section-title">CANDIDATE DETAILS</h2>
+      <form id="registrationForm" class="form" novalidate>
+        <div class="grid">
+          <label class="field">
+            <span>Full Name</span>
+            <input type="text" name="full_name" placeholder="Full Name" required />
+          </label>
+
+          <label class="field">
+            <span>Father's Name</span>
+            <input type="text" name="father_name" placeholder="Father's Name" required />
+          </label>
+
+          <label class="field">
+            <span>Mother's Name</span>
+            <input type="text" name="mother_name" placeholder="Mother's Name" required />
+          </label>
+
+          <fieldset class="field field-inline">
+            <legend>Gender</legend>
+            <label class="radio"><input type="radio" name="gender" value="Male" required /> <span>Male</span></label>
+            <label class="radio"><input type="radio" name="gender" value="Female" required /> <span>Female</span></label>
+          </fieldset>
+
+          <label class="field">
+            <span>Date of Birth</span>
+            <input type="date" name="dob" required />
+          </label>
+
+          <label class="field span-2">
+            <span>Institution / School / College name</span>
+            <input type="text" name="institute" placeholder="Institution / School / College" required />
+          </label>
+
+          <label class="field">
+            <span>Class</span>
+            <select name="class" required>
+              <option value="" selected disabled>Select</option>
+              <option>6</option>
+              <option>7</option>
+              <option>8</option>
+              <option>9</option>
+              <option>10</option>
+              <option>11</option>
+              <option>12</option>
+            </select>
+          </label>
+
+          <fieldset class="field field-inline">
+            <legend>Section</legend>
+            <label class="radio"><input type="radio" name="section" value="A" required /> <span>A</span></label>
+            <label class="radio"><input type="radio" name="section" value="B" required /> <span>B</span></label>
+            <label class="radio"><input type="radio" name="section" value="C" required /> <span>C</span></label>
+            <label class="radio"><input type="radio" name="section" value="D" required /> <span>D</span></label>
+            <label class="radio"><input type="radio" name="section" value="E" required /> <span>E</span></label>
+          </fieldset>
+
+          <label class="field">
+            <span>Phone No.</span>
+            <input type="tel" name="phone" inputmode="numeric" placeholder="Enter your phone No" required pattern="[0-9]{10}" />
+          </label>
+
+          <label class="field">
+            <span>Email</span>
+            <input type="email" name="email" placeholder="Enter your Email" required />
+          </label>
+
+          <label class="field span-2">
+            <span>Address</span>
+            <input type="text" name="address" placeholder="Address" />
+          </label>
+
+          <label class="field">
+            <span>Landmark</span>
+            <input type="text" name="landmark" placeholder="Landmark" />
+          </label>
+
+          <label class="field">
+            <span>City</span>
+            <input type="text" name="city" placeholder="City" />
+          </label>
+
+          <label class="field">
+            <span>Category</span>
+            <select name="category" required>
+              <option value="" selected disabled>Select</option>
+              <option>Public Speaker</option>
+              <option>Debat</option>
+              <option>Drafting</option>
+              <option>Editor</option>
+              <option>Phographer</option>
+              <option>Videorapher</option>
+              <option>Info Gatherer</option>
+              <option>Web Devloper</option>
+              <option>Graphic Designer</option>
+              <option>Pr team</option>
+            </select>
+          </label>
+
+
+        </div>
+
+        <div class="actions">
+          <button type="reset" class="btn ghost">Reset</button>
+          <button type="submit" class="btn primary">Submit</button>
+        </div>
+      </form>
+
+      <p class="issued">Issued by :SJR MUN CLUB</p>
+      <p class="slogan">"Stronger, Together, Higher"</p>
+    </section>
+
+    <footer class="footer">
+      <small>Designed for SJR MUN CLUB</small>
+      <br />
+      <span class="footer-credits">Website by <strong><a class="credit-link" href="https://works.onpratiks.com" target="_blank" rel="noopener noreferrer">Pratik</a></strong> © <span id="currentYear"></span></span>
+      <div class="footer-bar">
+        <div class="left">
+          <a class="social-btn" href="https://www.instagram.com/sjrmun" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+              <path fill="currentColor" d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7zm5 3.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11zm0 2a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm5.75-.75a1.25 1.25 0 1 1-2.5 0 1.25 1.25 0 0 1 2.5 0z"/>
+            </svg>
+            <span>Instagram</span>
+          </a>
+        </div>
+        <div class="right" style="display:flex; gap:12px; align-items:center;">
+          <a class="social-btn admin" href="formview" aria-label="Form View" style="background:transparent; border:1px solid var(--primary); color:var(--primary); box-shadow:none;">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+              <path fill="currentColor" d="M6 2h7l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm7 1.5V8h4.5L13 3.5zM8 11h8v1.5H8V11zm0 3h8v1.5H8V14zm0 3h5v1.5H8V17z"/>
+            </svg>
+            <span>Form View</span>
+          </a>
+          <a class="social-btn admin" href="admin" aria-label="Admin Panel">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+              <!-- simple gear icon -->
+              <path fill="currentColor" d="M12 8.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zm9 3.5c0-.5-.04-.98-.12-1.45l2.02-1.57-2-3.46-2.44 1a8.9 8.9 0 0 0-2.51-1.45l-.37-2.6H10.4l-.37 2.6c-.9.3-1.74.75-2.51 1.45l-2.44-1-2 3.46 2.02 1.57c-.08.47-.12.95-.12 1.45s.04.98.12 1.45L1.08 15l2 3.46 2.44-1c.77.7 1.61 1.15 2.51 1.45l.37 2.6h3.68l.37-2.6c.9-.3 1.74-.75 2.51-1.45l2.44 1 2-3.46-2.02-1.57c.08-.47.12-.95.12-1.45z"/>
+            </svg>
+            <span>Admin Panel</span>
+          </a>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+  <script>AOS.init({ once:true, duration:700, easing:'ease-out-cubic' });</script>
+  <script src="handler/script.js"></script>
+  <script>
+    window.env = {
+      FIREBASE_API_KEY: window.FIREBASE_API_KEY || "",
+      FIREBASE_AUTH_DOMAIN: window.FIREBASE_AUTH_DOMAIN || "",
+      FIREBASE_PROJECT_ID: window.FIREBASE_PROJECT_ID || "",
+      FIREBASE_STORAGE_BUCKET: window.FIREBASE_STORAGE_BUCKET || "",
+      FIREBASE_MESSAGING_SENDER_ID: window.FIREBASE_MESSAGING_SENDER_ID || "",
+      FIREBASE_APP_ID: window.FIREBASE_APP_ID || ""
+    };
+  </script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc, runTransaction, serverTimestamp, collection } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+
+    const cfg = {
+      apiKey: window.env.FIREBASE_API_KEY,
+      authDomain: window.env.FIREBASE_AUTH_DOMAIN,
+      projectId: window.env.FIREBASE_PROJECT_ID,
+      storageBucket: window.env.FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: window.env.FIREBASE_MESSAGING_SENDER_ID,
+      appId: window.env.FIREBASE_APP_ID,
+    };
+    if (!cfg.apiKey || !cfg.projectId) {
+      console.error("Missing Firebase config. Provide keys in window.env.");
+    }
+    const app = initializeApp(cfg);
+    const db = getFirestore(app);
+
+    const form = document.getElementById('registrationForm');
+    const toast = (() => {
+      const el = document.createElement('div');
+      el.id = 'popup';
+      el.className = 'toast';
+      el.innerHTML = '<span id="popupText"></span><button id="popupClose" class="btn ghost">Close</button>';
+      document.body.appendChild(el);
+      const text = el.querySelector('#popupText');
+      const close = el.querySelector('#popupClose');
+      let hideT;
+      close.addEventListener('click', () => { el.classList.remove('show','success','error'); });
+      return {
+        show(msg, kind='success'){
+          text.textContent = msg;
+          el.classList.remove('success','error');
+          el.classList.add('show', kind);
+          clearTimeout(hideT);
+          hideT = setTimeout(() => el.classList.remove('show','success','error'), 6000);
+        }
+      };
+    })();
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const data = Object.fromEntries(fd.entries());
+
+      try {
+        const nextNumber = await runTransaction(db, async (tx) => {
+          const counterRef = doc(db, 'meta', 'counters');
+          const counterSnap = await tx.get(counterRef);
+          let current = 0;
+          if (counterSnap.exists()) {
+            current = Number(counterSnap.data().formCounter || 0);
+          }
+          const next = current + 1;
+          tx.set(counterRef, { formCounter: next }, { merge: true });
+          return next;
+        });
+
+        const formNumber = String(nextNumber).padStart(6, '0');
+        const record = {
+          form_number: formNumber,
+          full_name: data.full_name || '',
+          father_name: data.father_name || '',
+          mother_name: data.mother_name || '',
+          gender: data.gender || '',
+          dob: data.dob || '',
+          institute: data.institute || '',
+          class: data.class || '',
+          section: data.section || '',
+          phone: data.phone || '',
+          email: data.email || '',
+          address: data.address || '',
+          landmark: data.landmark || '',
+          city: data.city || '',
+          category: data.category || '',
+          created_at: serverTimestamp()
+        };
+
+        await setDoc(doc(db, 'records', formNumber), record);
+
+        toast.show(`Form submitted. Your Form Number is ${formNumber}. Save it to view/download later in Form View.`,'success');
+        form.reset();
+      } catch (err) {
+        console.error(err);
+        toast.show('Could not submit the form. Please try again.','error');
+      }
+    });
+  </script>
+</body>
+</html>
