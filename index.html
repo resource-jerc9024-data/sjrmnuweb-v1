@@ -3,14 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <!-- CSP for Firebase compatibility -->
-  <meta http-equiv="Content-Security-Policy" 
-        content="default-src 'self'; 
-                 script-src 'self' 'unsafe-eval' https://www.gstatic.com https://cdn.jsdelivr.net https://unpkg.com; 
+  <!-- CSP: broadened to avoid blocking Firebase workers, AOS, and local assets during setup -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self' https: data: blob:; 
+                 script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdn.jsdelivr.net https://unpkg.com https://www.googletagmanager.com blob:; 
                  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; 
-                 font-src 'self' https://fonts.gstatic.com; 
-                 connect-src 'self' https://firestore.googleapis.com https://*.firebaseio.com https://identitytoolkit.googleapis.com; 
-                 img-src 'self' data: https:;">
+                 font-src 'self' https://fonts.gstatic.com data:; 
+                 img-src 'self' data: https: blob:; 
+                 connect-src 'self' https://firestore.googleapis.com https://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://*.googleapis.com https://*.gstatic.com; 
+                 worker-src 'self' blob: https://www.gstatic.com; 
+                 frame-src 'self' https://*.firebaseapp.com https://*.google.com;">
   <title>SJR MUN Registration</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -193,6 +195,36 @@
   <script>AOS.init({ once:true, duration:700, easing:'ease-out-cubic' });</script>
   <script src="handler/script.js"></script>
   <script>
+    // Global toast utility reused by success and error notifications
+    (function(){
+      function ensureToast(){
+        let el = document.getElementById('popup');
+        if (!el) {
+          el = document.createElement('div');
+          el.id = 'popup';
+          el.className = 'toast';
+          el.innerHTML = '<span id="popupText"></span><button id="popupClose" class="btn ghost">Close</button>';
+          document.body.appendChild(el);
+          const close = el.querySelector('#popupClose');
+          close.addEventListener('click', () => { el.classList.remove('show','success','error'); });
+        }
+        return el;
+      }
+      window.showToast = function(msg, kind='success'){
+        const el = ensureToast();
+        const text = el.querySelector('#popupText');
+        if (text) text.textContent = msg;
+        el.classList.remove('success','error');
+        el.classList.add('show', kind);
+        clearTimeout(el.__hideT);
+        el.__hideT = setTimeout(() => el.classList.remove('show','success','error'), 6000);
+      };
+      window.showSiteError = function(msg){
+        window.showToast(msg || 'An error occurred', 'error');
+      };
+    })();
+  </script>
+  <script>
     window.loadFirebaseConfig = async function loadFirebaseConfig(){
       try {
         if (window.FIREBASE_API_KEY && window.FIREBASE_PROJECT_ID) {
@@ -219,7 +251,7 @@
         return true;
       } catch (err) {
         console.error('Failed to load Firebase config:', err);
-        alert('Application configuration error: ' + err.message);
+        window.showSiteError('Application configuration error: ' + (err && err.message ? err.message : 'Failed to fetch'));
         return false;
       }
     }
@@ -267,7 +299,7 @@
     if (!cfg.apiKey || !cfg.projectId) {
       const error = 'Missing Firebase config. Check Vercel environment variables.';
       console.error(error);
-      alert(error);
+      window.showSiteError(error);
       throw new Error(error);
     }
 
@@ -278,24 +310,28 @@
       console.log('Firebase initialized successfully');
     } catch (error) {
       console.error('Firebase initialization error:', error);
-      alert('Firebase initialization failed: ' + error.message);
+      window.showSiteError('Firebase initialization failed: ' + (error && error.message ? error.message : 'Unknown error'));
       throw error;
     }
 
     const form = document.getElementById('registrationForm');
     const toast = (() => {
-      const el = document.createElement('div');
-      el.id = 'popup';
-      el.className = 'toast';
-      el.innerHTML = '<span id="popupText"></span><button id="popupClose" class="btn ghost">Close</button>';
-      document.body.appendChild(el);
+      // Reuse existing #popup created by global utility if present
+      let el = document.getElementById('popup');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'popup';
+        el.className = 'toast';
+        el.innerHTML = '<span id="popupText"></span><button id="popupClose" class="btn ghost">Close</button>';
+        document.body.appendChild(el);
+      }
       const text = el.querySelector('#popupText');
       const close = el.querySelector('#popupClose');
       let hideT;
       close.addEventListener('click', () => { el.classList.remove('show','success','error'); });
       return {
         show(msg, kind='success'){
-          text.textContent = msg;
+          if (text) text.textContent = msg;
           el.classList.remove('success','error');
           el.classList.add('show', kind);
           clearTimeout(hideT);
