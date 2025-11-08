@@ -258,7 +258,7 @@
   </script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, getDoc, updateDoc, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore-lite.js";
 
     // Debug: before loading config
     console.log('Before loading config:', {
@@ -337,17 +337,13 @@
 
       try {
         console.log('Starting form submission...', data);
-        const nextNumber = await runTransaction(db, async (tx) => {
-          const counterRef = doc(db, 'meta', 'counters');
-          const counterSnap = await tx.get(counterRef);
-          let current = 0;
-          if (counterSnap.exists()) {
-            current = Number(counterSnap.data().formCounter || 0);
-          }
-          const next = current + 1;
-          tx.set(counterRef, { formCounter: next }, { merge: true });
-          return next;
-        });
+        // Firestore Lite: use atomic increment instead of transaction
+        const counterRef = doc(db, 'meta', 'counters');
+        // ensure doc exists
+        await setDoc(counterRef, { formCounter: 0 }, { merge: true });
+        await updateDoc(counterRef, { formCounter: increment(1) });
+        const after = await getDoc(counterRef);
+        const nextNumber = Number((after.exists() && after.data().formCounter) || 0);
 
         const formNumber = String(nextNumber).padStart(6, '0');
         const record = {
