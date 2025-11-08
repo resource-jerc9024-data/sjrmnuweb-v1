@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <!-- Minimal CSP to support Firebase full SDK (allows 'unsafe-eval') -->
+  <!-- Fixed CSP with unsafe-inline for scripts -->
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self' https: data:; 
-                 script-src 'self' 'unsafe-eval' https://www.gstatic.com https://cdn.jsdelivr.net https://unpkg.com; 
+                 script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.gstatic.com https://cdn.jsdelivr.net https://unpkg.com; 
                  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; 
                  font-src 'self' https://fonts.gstatic.com; 
                  connect-src 'self' https://firestore.googleapis.com https://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com; 
@@ -50,17 +50,17 @@
         <div class="grid">
           <label class="field">
             <span>Full Name</span>
-            <input type="text" name="full_name" placeholder="Full Name" required />
+            <input type="text" name="full_name" placeholder="Full Name" autocomplete="name" required />
           </label>
 
           <label class="field">
             <span>Father's Name</span>
-            <input type="text" name="father_name" placeholder="Father's Name" required />
+            <input type="text" name="father_name" placeholder="Father's Name" autocomplete="additional-name" required />
           </label>
 
           <label class="field">
             <span>Mother's Name</span>
-            <input type="text" name="mother_name" placeholder="Mother's Name" required />
+            <input type="text" name="mother_name" placeholder="Mother's Name" autocomplete="additional-name" required />
           </label>
 
           <fieldset class="field field-inline">
@@ -71,17 +71,17 @@
 
           <label class="field">
             <span>Date of Birth</span>
-            <input type="date" name="dob" required />
+            <input type="date" name="dob" autocomplete="bday" required />
           </label>
 
           <label class="field span-2">
             <span>Institution / School / College name</span>
-            <input type="text" name="institute" placeholder="Institution / School / College" required />
+            <input type="text" name="institute" placeholder="Institution / School / College" autocomplete="organization" required />
           </label>
 
           <label class="field">
             <span>Class</span>
-            <select name="class" required>
+            <select name="class" autocomplete="education-level" required>
               <option value="" selected disabled>Select</option>
               <option>6</option>
               <option>7</option>
@@ -104,32 +104,32 @@
 
           <label class="field">
             <span>Phone No.</span>
-            <input type="tel" name="phone" inputmode="numeric" placeholder="Enter your phone No" required pattern="[0-9]{10}" />
+            <input type="tel" name="phone" inputmode="numeric" placeholder="Enter your phone No" autocomplete="tel" required pattern="[0-9]{10}" />
           </label>
 
           <label class="field">
             <span>Email</span>
-            <input type="email" name="email" placeholder="Enter your Email" required />
+            <input type="email" name="email" placeholder="Enter your Email" autocomplete="email" required />
           </label>
 
           <label class="field span-2">
             <span>Address</span>
-            <input type="text" name="address" placeholder="Address" />
+            <input type="text" name="address" placeholder="Address" autocomplete="street-address" />
           </label>
 
           <label class="field">
             <span>Landmark</span>
-            <input type="text" name="landmark" placeholder="Landmark" />
+            <input type="text" name="landmark" placeholder="Landmark" autocomplete="landmark" />
           </label>
 
           <label class="field">
             <span>City</span>
-            <input type="text" name="city" placeholder="City" />
+            <input type="text" name="city" placeholder="City" autocomplete="address-level2" />
           </label>
 
           <label class="field">
             <span>Category</span>
-            <select name="category" required>
+            <select name="category" autocomplete="off" required>
               <option value="" selected disabled>Select</option>
               <option>Public Speaker</option>
               <option>Debat</option>
@@ -192,8 +192,9 @@
   <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
   <script>AOS.init({ once:true, duration:700, easing:'ease-out-cubic' });</script>
   <script src="handler/script.js"></script>
+  
+  <!-- Toast functionality -->
   <script>
-    // Global toast utility reused by success and error notifications
     (function(){
       function ensureToast(){
         let el = document.getElementById('popup');
@@ -222,6 +223,8 @@
       };
     })();
   </script>
+
+  <!-- Firebase config loader -->
   <script>
     window.loadFirebaseConfig = async function loadFirebaseConfig(){
       try {
@@ -254,6 +257,8 @@
       }
     }
   </script>
+
+  <!-- Firebase environment setup -->
   <script>
     window.env = {
       FIREBASE_API_KEY: window.FIREBASE_API_KEY || "",
@@ -264,137 +269,146 @@
       FIREBASE_APP_ID: window.FIREBASE_APP_ID || ""
     };
   </script>
+
+  <!-- Current year for footer -->
+  <script>
+    document.getElementById('currentYear').textContent = new Date().getFullYear();
+  </script>
+
+  <!-- Main Firebase application -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
     import { getFirestore, doc, setDoc, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 
-    try {
-      // Debug: before loading config
-      console.log('Before loading config:', {
-        hasAPIKey: !!window.FIREBASE_API_KEY,
-        hasProjectId: !!window.FIREBASE_PROJECT_ID
-      });
-
-      const ok = await window.loadFirebaseConfig();
-      if (!ok) throw new Error('Firebase configuration failed to load');
-
-      // Debug: after loading config
-      console.log('After loading config:', {
-        apiKey: window.FIREBASE_API_KEY ? 'Loaded' : 'Missing',
-        projectId: window.FIREBASE_PROJECT_ID ? 'Loaded' : 'Missing',
-        authDomain: window.FIREBASE_AUTH_DOMAIN
-      });
-
-      const cfg = {
-        apiKey: window.FIREBASE_API_KEY,
-        authDomain: window.FIREBASE_AUTH_DOMAIN,
-        projectId: window.FIREBASE_PROJECT_ID,
-        storageBucket: window.FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: window.FIREBASE_MESSAGING_SENDER_ID,
-        appId: window.FIREBASE_APP_ID,
-      };
-      console.log('Firebase config:', cfg);
-
-      if (!cfg.apiKey || !cfg.projectId) {
-        const error = 'Missing Firebase config. Check Vercel environment variables.';
-        console.error(error);
-        window.showSiteError(error);
-        throw new Error(error);
-      }
-
-      let app, db;
+    (async () => {
       try {
-        app = initializeApp(cfg);
-        db = getFirestore(app);
-        console.log('Firebase initialized successfully');
-      } catch (error) {
-        console.error('Firebase initialization error:', error);
-        window.showSiteError('Firebase initialization failed: ' + (error && error.message ? error.message : 'Unknown error'));
-        throw error;
-      }
+        // Debug: before loading config
+        console.log('Before loading config:', {
+          hasAPIKey: !!window.FIREBASE_API_KEY,
+          hasProjectId: !!window.FIREBASE_PROJECT_ID
+        });
 
-      const form = document.getElementById('registrationForm');
-      const toast = (() => {
-        // Reuse existing #popup created by global utility if present
-        let el = document.getElementById('popup');
-        if (!el) {
-          el = document.createElement('div');
-          el.id = 'popup';
-          el.className = 'toast';
-          el.innerHTML = '<span id="popupText"></span><button id="popupClose" class="btn ghost">Close</button>';
-          document.body.appendChild(el);
-        }
-        const text = el.querySelector('#popupText');
-        const close = el.querySelector('#popupClose');
-        let hideT;
-        close.addEventListener('click', () => { el.classList.remove('show','success','error'); });
-        return {
-          show(msg, kind='success'){
-            if (text) text.textContent = msg;
-            el.classList.remove('success','error');
-            el.classList.add('show', kind);
-            clearTimeout(hideT);
-            hideT = setTimeout(() => el.classList.remove('show','success','error'), 6000);
-          }
+        const ok = await window.loadFirebaseConfig();
+        if (!ok) throw new Error('Firebase configuration failed to load');
+
+        // Debug: after loading config
+        console.log('After loading config:', {
+          apiKey: window.FIREBASE_API_KEY ? 'Loaded' : 'Missing',
+          projectId: window.FIREBASE_PROJECT_ID ? 'Loaded' : 'Missing',
+          authDomain: window.FIREBASE_AUTH_DOMAIN
+        });
+
+        const cfg = {
+          apiKey: window.FIREBASE_API_KEY,
+          authDomain: window.FIREBASE_AUTH_DOMAIN,
+          projectId: window.FIREBASE_PROJECT_ID,
+          storageBucket: window.FIREBASE_STORAGE_BUCKET,
+          messagingSenderId: window.FIREBASE_MESSAGING_SENDER_ID,
+          appId: window.FIREBASE_APP_ID,
         };
-      })();
+        console.log('Firebase config:', cfg);
 
-      form?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const fd = new FormData(form);
-        const data = Object.fromEntries(fd.entries());
-
-        try {
-          console.log('Starting form submission...', data);
-          // Use transaction for reliable counter increment
-          const nextNumber = await runTransaction(db, async (tx) => {
-            const counterRef = doc(db, 'meta', 'counters');
-            const counterSnap = await tx.get(counterRef);
-            let current = 0;
-            if (counterSnap.exists()) {
-              current = Number(counterSnap.data().formCounter || 0);
-            }
-            const next = current + 1;
-            tx.set(counterRef, { formCounter: next }, { merge: true });
-            return next;
-          });
-
-          const formNumber = String(nextNumber).padStart(6, '0');
-          const record = {
-            form_number: formNumber,
-            full_name: data.full_name || '',
-            father_name: data.father_name || '',
-            mother_name: data.mother_name || '',
-            gender: data.gender || '',
-            dob: data.dob || '',
-            institute: data.institute || '',
-            class: data.class || '',
-            section: data.section || '',
-            phone: data.phone || '',
-            email: data.email || '',
-            address: data.address || '',
-            landmark: data.landmark || '',
-            city: data.city || '',
-            category: data.category || '',
-            created_at: serverTimestamp()
-          };
-
-          console.log('Saving record to Firestore:', record);
-          await setDoc(doc(db, 'records', formNumber), record);
-          console.log('Record saved successfully');
-
-          toast.show(`Form submitted. Your Form Number is ${formNumber}. Save it to view/download later in Form View.`, 'success');
-          form.reset();
-        } catch (err) {
-          console.error('Form submission error:', err);
-          toast.show('Could not submit the form. Please try again.', 'error');
+        if (!cfg.apiKey || !cfg.projectId) {
+          const error = 'Missing Firebase config. Check Vercel environment variables.';
+          console.error(error);
+          window.showSiteError(error);
+          throw new Error(error);
         }
-      });
-    } catch (error) {
-      console.error('Critical error in module:', error);
-      // Do not rethrow; keep page rendered
-      window.showSiteError('Application failed to initialize. Please refresh the page.');
-    }
+
+        let app, db;
+        try {
+          app = initializeApp(cfg);
+          db = getFirestore(app);
+          console.log('Firebase initialized successfully');
+        } catch (error) {
+          console.error('Firebase initialization error:', error);
+          window.showSiteError('Firebase initialization failed: ' + (error && error.message ? error.message : 'Unknown error'));
+          throw error;
+        }
+
+        const form = document.getElementById('registrationForm');
+        const toast = (() => {
+          // Reuse existing #popup created by global utility if present
+          let el = document.getElementById('popup');
+          if (!el) {
+            el = document.createElement('div');
+            el.id = 'popup';
+            el.className = 'toast';
+            el.innerHTML = '<span id="popupText"></span><button id="popupClose" class="btn ghost">Close</button>';
+            document.body.appendChild(el);
+          }
+          const text = el.querySelector('#popupText');
+          const close = el.querySelector('#popupClose');
+          let hideT;
+          close.addEventListener('click', () => { el.classList.remove('show','success','error'); });
+          return {
+            show(msg, kind='success'){
+              if (text) text.textContent = msg;
+              el.classList.remove('success','error');
+              el.classList.add('show', kind);
+              clearTimeout(hideT);
+              hideT = setTimeout(() => el.classList.remove('show','success','error'), 6000);
+            }
+          };
+        })();
+
+        form?.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const fd = new FormData(form);
+          const data = Object.fromEntries(fd.entries());
+
+          try {
+            console.log('Starting form submission...', data);
+            // Use transaction for reliable counter increment
+            const nextNumber = await runTransaction(db, async (tx) => {
+              const counterRef = doc(db, 'meta', 'counters');
+              const counterSnap = await tx.get(counterRef);
+              let current = 0;
+              if (counterSnap.exists()) {
+                current = Number(counterSnap.data().formCounter || 0);
+              }
+              const next = current + 1;
+              tx.set(counterRef, { formCounter: next }, { merge: true });
+              return next;
+            });
+
+            const formNumber = String(nextNumber).padStart(6, '0');
+            const record = {
+              form_number: formNumber,
+              full_name: data.full_name || '',
+              father_name: data.father_name || '',
+              mother_name: data.mother_name || '',
+              gender: data.gender || '',
+              dob: data.dob || '',
+              institute: data.institute || '',
+              class: data.class || '',
+              section: data.section || '',
+              phone: data.phone || '',
+              email: data.email || '',
+              address: data.address || '',
+              landmark: data.landmark || '',
+              city: data.city || '',
+              category: data.category || '',
+              created_at: serverTimestamp()
+            };
+
+            console.log('Saving record to Firestore:', record);
+            await setDoc(doc(db, 'records', formNumber), record);
+            console.log('Record saved successfully');
+
+            toast.show(`Form submitted. Your Form Number is ${formNumber}. Save it to view/download later in Form View.`, 'success');
+            form.reset();
+          } catch (err) {
+            console.error('Form submission error:', err);
+            toast.show('Could not submit the form. Please try again.', 'error');
+          }
+        });
+      } catch (error) {
+        console.error('Critical error in module:', error);
+        // Do not rethrow; keep page rendered
+        window.showSiteError('Application failed to initialize. Please refresh the page.');
+      }
+    })();
   </script>
 </body>
 </html>
