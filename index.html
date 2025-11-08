@@ -187,21 +187,31 @@
   <script>
     window.loadFirebaseConfig = async function loadFirebaseConfig(){
       try {
-        if (window.FIREBASE_API_KEY && window.FIREBASE_PROJECT_ID) return true;
+        if (window.FIREBASE_API_KEY && window.FIREBASE_PROJECT_ID) {
+          console.log('Firebase config already loaded');
+          return true;
+        }
+        console.log('Loading Firebase config from /api/env...');
         const res = await fetch('/api/env');
-        if (!res.ok) throw new Error('HTTP ' + res.status);
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+        }
         const cfg = await res.json();
-        if (!cfg.FIREBASE_API_KEY || !cfg.FIREBASE_PROJECT_ID) throw new Error('Missing required Firebase configuration');
+        console.log('Received config from API:', cfg);
+        if (!cfg.FIREBASE_API_KEY || !cfg.FIREBASE_PROJECT_ID) {
+          throw new Error('Missing required Firebase configuration from API');
+        }
         window.FIREBASE_API_KEY = cfg.FIREBASE_API_KEY;
         window.FIREBASE_AUTH_DOMAIN = cfg.FIREBASE_AUTH_DOMAIN;
         window.FIREBASE_PROJECT_ID = cfg.FIREBASE_PROJECT_ID;
         window.FIREBASE_STORAGE_BUCKET = cfg.FIREBASE_STORAGE_BUCKET;
         window.FIREBASE_MESSAGING_SENDER_ID = cfg.FIREBASE_MESSAGING_SENDER_ID;
         window.FIREBASE_APP_ID = cfg.FIREBASE_APP_ID;
+        console.log('Firebase config loaded successfully');
         return true;
       } catch (err) {
         console.error('Failed to load Firebase config:', err);
-        alert('Application configuration error. Please contact administrator.');
+        alert('Application configuration error: ' + err.message);
         return false;
       }
     }
@@ -218,9 +228,24 @@
   </script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc, runTransaction, serverTimestamp, collection } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+
+    // Debug: before loading config
+    console.log('Before loading config:', {
+      hasAPIKey: !!window.FIREBASE_API_KEY,
+      hasProjectId: !!window.FIREBASE_PROJECT_ID
+    });
+
     const ok = await window.loadFirebaseConfig();
     if (!ok) throw new Error('Firebase configuration failed to load');
+
+    // Debug: after loading config
+    console.log('After loading config:', {
+      apiKey: window.FIREBASE_API_KEY ? 'Loaded' : 'Missing',
+      projectId: window.FIREBASE_PROJECT_ID ? 'Loaded' : 'Missing',
+      authDomain: window.FIREBASE_AUTH_DOMAIN
+    });
+
     const cfg = {
       apiKey: window.FIREBASE_API_KEY,
       authDomain: window.FIREBASE_AUTH_DOMAIN,
@@ -229,9 +254,25 @@
       messagingSenderId: window.FIREBASE_MESSAGING_SENDER_ID,
       appId: window.FIREBASE_APP_ID,
     };
-    if (!cfg.apiKey || !cfg.projectId) { throw new Error('Missing Firebase config. Check Vercel environment variables.'); }
-    const app = initializeApp(cfg);
-    const db = getFirestore(app);
+    console.log('Firebase config:', cfg);
+
+    if (!cfg.apiKey || !cfg.projectId) {
+      const error = 'Missing Firebase config. Check Vercel environment variables.';
+      console.error(error);
+      alert(error);
+      throw new Error(error);
+    }
+
+    let app, db;
+    try {
+      app = initializeApp(cfg);
+      db = getFirestore(app);
+      console.log('Firebase initialized successfully');
+    } catch (error) {
+      console.error('Firebase initialization error:', error);
+      alert('Firebase initialization failed: ' + error.message);
+      throw error;
+    }
 
     const form = document.getElementById('registrationForm');
     const toast = (() => {
@@ -254,12 +295,14 @@
         }
       };
     })();
+
     form?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(form);
       const data = Object.fromEntries(fd.entries());
 
       try {
+        console.log('Starting form submission...', data);
         const nextNumber = await runTransaction(db, async (tx) => {
           const counterRef = doc(db, 'meta', 'counters');
           const counterSnap = await tx.get(counterRef);
@@ -292,13 +335,15 @@
           created_at: serverTimestamp()
         };
 
+        console.log('Saving record to Firestore:', record);
         await setDoc(doc(db, 'records', formNumber), record);
+        console.log('Record saved successfully');
 
-        toast.show(`Form submitted. Your Form Number is ${formNumber}. Save it to view/download later in Form View.`,'success');
+        toast.show(`Form submitted. Your Form Number is ${formNumber}. Save it to view/download later in Form View.`, 'success');
         form.reset();
       } catch (err) {
-        console.error(err);
-        toast.show('Could not submit the form. Please try again.','error');
+        console.error('Form submission error:', err);
+        toast.show('Could not submit the form. Please try again.', 'error');
       }
     });
   </script>
