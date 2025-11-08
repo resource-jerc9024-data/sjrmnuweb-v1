@@ -98,6 +98,27 @@
     })();
   </script>
   <script>
+    (function(){
+      try {
+        if (!window.FIREBASE_API_KEY) {
+          var xhr = new XMLHttpRequest();
+          xhr.open('GET', '/api/env', false);
+          xhr.setRequestHeader('Accept','application/json');
+          xhr.send(null);
+          if (xhr.status >= 200 && xhr.status < 300) {
+            var cfg = JSON.parse(xhr.responseText || '{}');
+            window.FIREBASE_API_KEY = cfg.FIREBASE_API_KEY || '';
+            window.FIREBASE_AUTH_DOMAIN = cfg.FIREBASE_AUTH_DOMAIN || '';
+            window.FIREBASE_PROJECT_ID = cfg.FIREBASE_PROJECT_ID || '';
+            window.FIREBASE_STORAGE_BUCKET = cfg.FIREBASE_STORAGE_BUCKET || '';
+            window.FIREBASE_MESSAGING_SENDER_ID = cfg.FIREBASE_MESSAGING_SENDER_ID || '';
+            window.FIREBASE_APP_ID = cfg.FIREBASE_APP_ID || '';
+          }
+        }
+      } catch(e) { console.error('Failed to load /api/env', e); }
+    })();
+  </script>
+  <script>
     window.env = {
       FIREBASE_API_KEY: window.FIREBASE_API_KEY || "",
       FIREBASE_AUTH_DOMAIN: window.FIREBASE_AUTH_DOMAIN || "",
