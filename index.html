@@ -266,124 +266,135 @@
   </script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, updateDoc, getDoc, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 
-    // Debug: before loading config
-    console.log('Before loading config:', {
-      hasAPIKey: !!window.FIREBASE_API_KEY,
-      hasProjectId: !!window.FIREBASE_PROJECT_ID
-    });
-
-    const ok = await window.loadFirebaseConfig();
-    if (!ok) throw new Error('Firebase configuration failed to load');
-
-    // Debug: after loading config
-    console.log('After loading config:', {
-      apiKey: window.FIREBASE_API_KEY ? 'Loaded' : 'Missing',
-      projectId: window.FIREBASE_PROJECT_ID ? 'Loaded' : 'Missing',
-      authDomain: window.FIREBASE_AUTH_DOMAIN
-    });
-
-    const cfg = {
-      apiKey: window.FIREBASE_API_KEY,
-      authDomain: window.FIREBASE_AUTH_DOMAIN,
-      projectId: window.FIREBASE_PROJECT_ID,
-      storageBucket: window.FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: window.FIREBASE_MESSAGING_SENDER_ID,
-      appId: window.FIREBASE_APP_ID,
-    };
-    console.log('Firebase config:', cfg);
-
-    if (!cfg.apiKey || !cfg.projectId) {
-      const error = 'Missing Firebase config. Check Vercel environment variables.';
-      console.error(error);
-      window.showSiteError(error);
-      throw new Error(error);
-    }
-
-    let app, db;
     try {
-      app = initializeApp(cfg);
-      db = getFirestore(app);
-      console.log('Firebase initialized successfully');
-    } catch (error) {
-      console.error('Firebase initialization error:', error);
-      window.showSiteError('Firebase initialization failed: ' + (error && error.message ? error.message : 'Unknown error'));
-      throw error;
-    }
+      // Debug: before loading config
+      console.log('Before loading config:', {
+        hasAPIKey: !!window.FIREBASE_API_KEY,
+        hasProjectId: !!window.FIREBASE_PROJECT_ID
+      });
 
-    const form = document.getElementById('registrationForm');
-    const toast = (() => {
-      // Reuse existing #popup created by global utility if present
-      let el = document.getElementById('popup');
-      if (!el) {
-        el = document.createElement('div');
-        el.id = 'popup';
-        el.className = 'toast';
-        el.innerHTML = '<span id="popupText"></span><button id="popupClose" class="btn ghost">Close</button>';
-        document.body.appendChild(el);
-      }
-      const text = el.querySelector('#popupText');
-      const close = el.querySelector('#popupClose');
-      let hideT;
-      close.addEventListener('click', () => { el.classList.remove('show','success','error'); });
-      return {
-        show(msg, kind='success'){
-          if (text) text.textContent = msg;
-          el.classList.remove('success','error');
-          el.classList.add('show', kind);
-          clearTimeout(hideT);
-          hideT = setTimeout(() => el.classList.remove('show','success','error'), 6000);
-        }
+      const ok = await window.loadFirebaseConfig();
+      if (!ok) throw new Error('Firebase configuration failed to load');
+
+      // Debug: after loading config
+      console.log('After loading config:', {
+        apiKey: window.FIREBASE_API_KEY ? 'Loaded' : 'Missing',
+        projectId: window.FIREBASE_PROJECT_ID ? 'Loaded' : 'Missing',
+        authDomain: window.FIREBASE_AUTH_DOMAIN
+      });
+
+      const cfg = {
+        apiKey: window.FIREBASE_API_KEY,
+        authDomain: window.FIREBASE_AUTH_DOMAIN,
+        projectId: window.FIREBASE_PROJECT_ID,
+        storageBucket: window.FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: window.FIREBASE_MESSAGING_SENDER_ID,
+        appId: window.FIREBASE_APP_ID,
       };
-    })();
+      console.log('Firebase config:', cfg);
 
-    form?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const fd = new FormData(form);
-      const data = Object.fromEntries(fd.entries());
-
-      try {
-        console.log('Starting form submission...', data);
-        // Firestore Lite: use atomic increment instead of transaction
-        const counterRef = doc(db, 'meta', 'counters');
-        // ensure doc exists
-        await setDoc(counterRef, { formCounter: 0 }, { merge: true });
-        await updateDoc(counterRef, { formCounter: increment(1) });
-        const after = await getDoc(counterRef);
-        const nextNumber = Number((after.exists() && after.data().formCounter) || 0);
-
-        const formNumber = String(nextNumber).padStart(6, '0');
-        const record = {
-          form_number: formNumber,
-          full_name: data.full_name || '',
-          father_name: data.father_name || '',
-          mother_name: data.mother_name || '',
-          gender: data.gender || '',
-          dob: data.dob || '',
-          institute: data.institute || '',
-          class: data.class || '',
-          section: data.section || '',
-          phone: data.phone || '',
-          email: data.email || '',
-          address: data.address || '',
-          landmark: data.landmark || '',
-          city: data.city || '',
-          category: data.category || '',
-          created_at: serverTimestamp()
-        };
-
-        console.log('Saving record to Firestore:', record);
-        await setDoc(doc(db, 'records', formNumber), record);
-        console.log('Record saved successfully');
-
-        toast.show(`Form submitted. Your Form Number is ${formNumber}. Save it to view/download later in Form View.`, 'success');
-        form.reset();
-      } catch (err) {
-        console.error('Form submission error:', err);
-        toast.show('Could not submit the form. Please try again.', 'error');
+      if (!cfg.apiKey || !cfg.projectId) {
+        const error = 'Missing Firebase config. Check Vercel environment variables.';
+        console.error(error);
+        window.showSiteError(error);
+        throw new Error(error);
       }
-    });
+
+      let app, db;
+      try {
+        app = initializeApp(cfg);
+        db = getFirestore(app);
+        console.log('Firebase initialized successfully');
+      } catch (error) {
+        console.error('Firebase initialization error:', error);
+        window.showSiteError('Firebase initialization failed: ' + (error && error.message ? error.message : 'Unknown error'));
+        throw error;
+      }
+
+      const form = document.getElementById('registrationForm');
+      const toast = (() => {
+        // Reuse existing #popup created by global utility if present
+        let el = document.getElementById('popup');
+        if (!el) {
+          el = document.createElement('div');
+          el.id = 'popup';
+          el.className = 'toast';
+          el.innerHTML = '<span id="popupText"></span><button id="popupClose" class="btn ghost">Close</button>';
+          document.body.appendChild(el);
+        }
+        const text = el.querySelector('#popupText');
+        const close = el.querySelector('#popupClose');
+        let hideT;
+        close.addEventListener('click', () => { el.classList.remove('show','success','error'); });
+        return {
+          show(msg, kind='success'){
+            if (text) text.textContent = msg;
+            el.classList.remove('success','error');
+            el.classList.add('show', kind);
+            clearTimeout(hideT);
+            hideT = setTimeout(() => el.classList.remove('show','success','error'), 6000);
+          }
+        };
+      })();
+
+      form?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(form);
+        const data = Object.fromEntries(fd.entries());
+
+        try {
+          console.log('Starting form submission...', data);
+          // Use transaction for reliable counter increment
+          const nextNumber = await runTransaction(db, async (tx) => {
+            const counterRef = doc(db, 'meta', 'counters');
+            const counterSnap = await tx.get(counterRef);
+            let current = 0;
+            if (counterSnap.exists()) {
+              current = Number(counterSnap.data().formCounter || 0);
+            }
+            const next = current + 1;
+            tx.set(counterRef, { formCounter: next }, { merge: true });
+            return next;
+          });
+
+          const formNumber = String(nextNumber).padStart(6, '0');
+          const record = {
+            form_number: formNumber,
+            full_name: data.full_name || '',
+            father_name: data.father_name || '',
+            mother_name: data.mother_name || '',
+            gender: data.gender || '',
+            dob: data.dob || '',
+            institute: data.institute || '',
+            class: data.class || '',
+            section: data.section || '',
+            phone: data.phone || '',
+            email: data.email || '',
+            address: data.address || '',
+            landmark: data.landmark || '',
+            city: data.city || '',
+            category: data.category || '',
+            created_at: serverTimestamp()
+          };
+
+          console.log('Saving record to Firestore:', record);
+          await setDoc(doc(db, 'records', formNumber), record);
+          console.log('Record saved successfully');
+
+          toast.show(`Form submitted. Your Form Number is ${formNumber}. Save it to view/download later in Form View.`, 'success');
+          form.reset();
+        } catch (err) {
+          console.error('Form submission error:', err);
+          toast.show('Could not submit the form. Please try again.', 'error');
+        }
+      });
+    } catch (error) {
+      console.error('Critical error in module:', error);
+      // Do not rethrow; keep page rendered
+      window.showSiteError('Application failed to initialize. Please refresh the page.');
+    }
   </script>
 </body>
 </html>
