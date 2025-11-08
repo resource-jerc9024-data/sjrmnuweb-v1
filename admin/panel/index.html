@@ -111,6 +111,32 @@
     </div>
   </footer>
   <script>
+    (function(){
+      function ensureToast(){
+        let el = document.getElementById('popup');
+        if (!el) {
+          el = document.createElement('div');
+          el.id = 'popup';
+          el.className = 'toast';
+          el.innerHTML = '<span id="popupText"></span><button id="popupClose" class="btn ghost">Close</button>';
+          document.body.appendChild(el);
+          const close = el.querySelector('#popupClose');
+          close.addEventListener('click', () => { el.classList.remove('show','success','error'); });
+        }
+        return el;
+      }
+      window.showToast = function(msg, kind='success'){
+        const el = ensureToast();
+        const text = el.querySelector('#popupText');
+        if (text) text.textContent = msg;
+        el.classList.remove('success','error');
+        el.classList.add('show', kind);
+        clearTimeout(el.__hideT);
+        el.__hideT = setTimeout(() => el.classList.remove('show','success','error'), 6000);
+      }
+    })();
+  </script>
+  <script>
     window.loadFirebaseConfig = async function loadFirebaseConfig(){
       try {
         if (window.FIREBASE_API_KEY && window.FIREBASE_PROJECT_ID) return true;
@@ -127,7 +153,7 @@
         return true;
       } catch (err) {
         console.error('Failed to load Firebase config:', err);
-        alert('Application configuration error. Please contact administrator.');
+        showToast('Application configuration error. Please contact administrator.', 'error');
         return false;
       }
     }
@@ -166,7 +192,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-    import { getFirestore, collection, getDocs, query, orderBy, Timestamp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore-lite.js";
     import { jsPDF } from "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.es.min.js";
     import * as XLSX from "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
 
@@ -375,7 +401,7 @@
     }
 
     document.getElementById('exportPdfAllBtn').addEventListener('click', () => {
-      if (!allRecords.length) return alert('No data');
+      if (!allRecords.length) return showToast('No data', 'error');
       const doc = new jsPDF();
       let y = 14;
       doc.setFontSize(16); doc.text('All Registrations', 14, y); y += 8;
@@ -398,7 +424,7 @@
     // CSV export removed per requirements
 
     document.getElementById('exportXlsxBtn').addEventListener('click', () => {
-      if (!allRecords.length) return alert('No data');
+      if (!allRecords.length) return showToast('No data', 'error');
       const data = allRecords.map(r => ({
         form_number: r.form_number || r.id,
         full_name: r.full_name,

@@ -114,10 +114,36 @@
         return true;
       } catch (err) {
         console.error('Failed to load Firebase config:', err);
-        alert('Application configuration error. Please contact administrator.');
+        showToast('Application configuration error. Please contact administrator.', 'error');
         return false;
       }
     }
+  </script>
+  <script>
+    (function(){
+      function ensureToast(){
+        let el = document.getElementById('popup');
+        if (!el) {
+          el = document.createElement('div');
+          el.id = 'popup';
+          el.className = 'toast';
+          el.innerHTML = '<span id="popupText"></span><button id="popupClose" class="btn ghost">Close</button>';
+          document.body.appendChild(el);
+          const close = el.querySelector('#popupClose');
+          close.addEventListener('click', () => { el.classList.remove('show','success','error'); });
+        }
+        return el;
+      }
+      window.showToast = function(msg, kind='success'){
+        const el = ensureToast();
+        const text = el.querySelector('#popupText');
+        if (text) text.textContent = msg;
+        el.classList.remove('success','error');
+        el.classList.add('show', kind);
+        clearTimeout(el.__hideT);
+        el.__hideT = setTimeout(() => el.classList.remove('show','success','error'), 6000);
+      }
+    })();
   </script>
   <script>
     window.env = {
@@ -148,7 +174,7 @@
 
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        window.location.href = 'panel';
+        window.location.href = 'admin/panel';
       }
     });
 
@@ -160,9 +186,9 @@
       const password = fd.get('password');
       try {
         await signInWithEmailAndPassword(auth, email, password);
-        window.location.href = 'panel';
+        window.location.href = 'admin/panel';
       } catch (err) {
-        alert('Login failed. Please check your credentials.');
+        showToast('Login failed. Please check your credentials.', 'error');
         console.error(err);
       }
     });
@@ -170,14 +196,14 @@
     document.getElementById('resetPasswordBtn').addEventListener('click', async () => {
       const email = (new FormData(form)).get('email');
       if (!email) {
-        alert('Enter your email first.');
+        showToast('Enter your email first.', 'error');
         return;
       }
       try {
         await sendPasswordResetEmail(auth, email);
-        alert('Password reset email sent.');
+        showToast('Password reset email sent.', 'success');
       } catch (err) {
-        alert('Failed to send reset email.');
+        showToast('Failed to send reset email.', 'error');
         console.error(err);
       }
     });
@@ -186,9 +212,9 @@
       const provider = new GoogleAuthProvider();
       try {
         await signInWithPopup(auth, provider);
-        window.location.href = 'panel';
+        window.location.href = 'admin/panel';
       } catch (err) {
-        alert('Google login failed.');
+        showToast('Google login failed.', 'error');
         console.error(err);
       }
     });

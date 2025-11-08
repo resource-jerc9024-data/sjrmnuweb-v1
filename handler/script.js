@@ -22,16 +22,8 @@
   });
 
   form.addEventListener('submit', (e)=>{
-    e.preventDefault();
-    if(!form.checkValidity()){
-      form.reportValidity();
-      return;
-    }
-    const data = new FormData(form);
-    const obj = Object.fromEntries(data.entries());
-    console.log('SJR MUN submission', obj);
-    alert('Thank you! Your registration is recorded locally. Connect this form to your backend or Google Form to store responses.');
-    form.reset();
+    // Intentionally left blank: Firestore submission is handled in index.html module script
+    // Keep this listener no-op to avoid duplicate handling or blocking default logic
   });
 })();
 

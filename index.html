@@ -16,6 +16,10 @@
     .toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
     .toast.success{border-color:rgba(158,240,26,.5)}
     .toast.error{border-color:#7f1d1d}
+    .field.error input, .field.error select, .field.field-inline.error { border-color: #ef4444 !important; box-shadow: 0 0 0 2px rgba(239,68,68,0.2) !important; }
+    .error-message { color: #ef4444; font-size: 12px; margin-top: 4px; display: none; }
+    .field.error .error-message { display: block; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
   </style>
 </head>
 <body>
@@ -42,32 +46,38 @@
           <label class="field">
             <span>Full Name</span>
             <input type="text" name="full_name" placeholder="Full Name" autocomplete="name" required />
+            <div class="error-message">Please enter your full name</div>
           </label>
 
           <label class="field">
             <span>Father's Name</span>
             <input type="text" name="father_name" placeholder="Father's Name" autocomplete="additional-name" required />
+            <div class="error-message">Please enter your father's name</div>
           </label>
 
           <label class="field">
             <span>Mother's Name</span>
             <input type="text" name="mother_name" placeholder="Mother's Name" autocomplete="additional-name" required />
+            <div class="error-message">Please enter your mother's name</div>
           </label>
 
-          <fieldset class="field field-inline">
+          <fieldset class="field field-inline" id="genderField">
             <legend>Gender</legend>
             <label class="radio"><input type="radio" name="gender" value="Male" required /> <span>Male</span></label>
             <label class="radio"><input type="radio" name="gender" value="Female" required /> <span>Female</span></label>
+            <div class="error-message">Please select your gender</div>
           </fieldset>
 
           <label class="field">
             <span>Date of Birth</span>
             <input type="date" name="dob" autocomplete="bday" required />
+            <div class="error-message">Please select your date of birth</div>
           </label>
 
           <label class="field span-2">
             <span>Institution / School / College name</span>
             <input type="text" name="institute" placeholder="Institution / School / College" autocomplete="organization" required />
+            <div class="error-message">Please enter your institution name</div>
           </label>
 
           <label class="field">
@@ -82,25 +92,29 @@
               <option>11</option>
               <option>12</option>
             </select>
+            <div class="error-message">Please select your class</div>
           </label>
 
-          <fieldset class="field field-inline">
+          <fieldset class="field field-inline" id="sectionField">
             <legend>Section</legend>
             <label class="radio"><input type="radio" name="section" value="A" required /> <span>A</span></label>
             <label class="radio"><input type="radio" name="section" value="B" required /> <span>B</span></label>
             <label class="radio"><input type="radio" name="section" value="C" required /> <span>C</span></label>
             <label class="radio"><input type="radio" name="section" value="D" required /> <span>D</span></label>
             <label class="radio"><input type="radio" name="section" value="E" required /> <span>E</span></label>
+            <div class="error-message">Please select your section</div>
           </fieldset>
 
           <label class="field">
             <span>Phone No.</span>
             <input type="tel" name="phone" inputmode="numeric" placeholder="Enter your phone No" autocomplete="tel" required pattern="[0-9]{10}" />
+            <div class="error-message">Please enter a valid 10-digit phone number</div>
           </label>
 
           <label class="field">
             <span>Email</span>
             <input type="email" name="email" placeholder="Enter your Email" autocomplete="email" required />
+            <div class="error-message">Please enter a valid email address</div>
           </label>
 
           <label class="field span-2">
@@ -133,12 +147,13 @@
               <option>Graphic Designer</option>
               <option>Pr team</option>
             </select>
+            <div class="error-message">Please select a category</div>
           </label>
         </div>
 
         <div class="actions">
-          <button type="reset" class="btn ghost">Reset</button>
-          <button type="submit" class="btn primary">Submit</button>
+          <button type="reset" class="btn ghost" id="resetBtn">Reset</button>
+          <button type="submit" class="btn primary" id="submitBtn">Submit</button>
         </div>
       </form>
 
@@ -181,8 +196,9 @@
   <script>AOS.init({ once:true, duration:700, easing:'ease-out-cubic' });</script>
   <script src="handler/script.js"></script>
   
-  <!-- Toast functionality -->
+  <!-- Form Validation & Toast functionality -->
   <script>
+    // Form validation utility
     (function(){
       function ensureToast(){
         let el = document.getElementById('popup');
@@ -197,6 +213,7 @@
         }
         return el;
       }
+      
       window.showToast = function(msg, kind='success'){
         const el = ensureToast();
         const text = el.querySelector('#popupText');
@@ -206,9 +223,124 @@
         clearTimeout(el.__hideT);
         el.__hideT = setTimeout(() => el.classList.remove('show','success','error'), 6000);
       };
+      
       window.showSiteError = function(msg){
         window.showToast(msg || 'An error occurred', 'error');
       };
+
+      // Form validation functions
+      window.validateForm = function(form) {
+        let isValid = true;
+        const fields = form.querySelectorAll('input[required], select[required], fieldset[required]');
+        
+        // Clear previous errors
+        form.querySelectorAll('.field').forEach(field => {
+          field.classList.remove('error');
+        });
+        
+        // Validate each field
+        fields.forEach(field => {
+          if (field.tagName === 'FIELDSET') {
+            // Radio button group validation
+            const radios = field.querySelectorAll('input[type="radio"]');
+            const checked = Array.from(radios).some(radio => radio.checked);
+            if (!checked) {
+              field.classList.add('error');
+              isValid = false;
+            }
+          } else if (field.type === 'email') {
+            // Email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!field.value || !emailRegex.test(field.value)) {
+              field.closest('.field').classList.add('error');
+              isValid = false;
+            }
+          } else if (field.type === 'tel') {
+            // Phone validation
+            const phoneRegex = /^[0-9]{10}$/;
+            if (!field.value || !phoneRegex.test(field.value)) {
+              field.closest('.field').classList.add('error');
+              isValid = false;
+            }
+          } else if (field.type === 'date') {
+            // Date validation
+            if (!field.value) {
+              field.closest('.field').classList.add('error');
+              isValid = false;
+            }
+          } else if (field.tagName === 'SELECT') {
+            // Select validation
+            if (!field.value) {
+              field.closest('.field').classList.add('error');
+              isValid = false;
+            }
+          } else {
+            // Text input validation
+            if (!field.value.trim()) {
+              field.closest('.field').classList.add('error');
+              isValid = false;
+            }
+          }
+        });
+        
+        return isValid;
+      };
+
+      // Real-time validation
+      window.setupRealTimeValidation = function(form) {
+        const fields = form.querySelectorAll('input, select');
+        
+        fields.forEach(field => {
+          field.addEventListener('blur', () => {
+            if (field.hasAttribute('required')) {
+              validateField(field);
+            }
+          });
+          
+          field.addEventListener('input', () => {
+            if (field.hasAttribute('required') && field.classList.contains('error')) {
+              validateField(field);
+            }
+          });
+        });
+
+        // Radio button validation
+        const radioGroups = form.querySelectorAll('fieldset[required]');
+        radioGroups.forEach(group => {
+          const radios = group.querySelectorAll('input[type="radio"]');
+          radios.forEach(radio => {
+            radio.addEventListener('change', () => {
+              if (group.classList.contains('error')) {
+                group.classList.remove('error');
+              }
+            });
+          });
+        });
+      };
+
+      function validateField(field) {
+        const fieldWrapper = field.closest('.field') || field;
+        
+        if (field.tagName === 'FIELDSET') {
+          const radios = field.querySelectorAll('input[type="radio"]');
+          const checked = Array.from(radios).some(radio => radio.checked);
+          if (checked) {
+            field.classList.remove('error');
+          }
+        } else if (field.type === 'email') {
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (field.value && emailRegex.test(field.value)) {
+            fieldWrapper.classList.remove('error');
+          }
+        } else if (field.type === 'tel') {
+          const phoneRegex = /^[0-9]{10}$/;
+          if (field.value && phoneRegex.test(field.value)) {
+            fieldWrapper.classList.remove('error');
+          }
+        } else if (field.value && field.value.trim()) {
+          fieldWrapper.classList.remove('error');
+        }
+      }
     })();
   </script>
 
@@ -270,21 +402,8 @@
 
     (async () => {
       try {
-        // Debug: before loading config
-        console.log('Before loading config:', {
-          hasAPIKey: !!window.FIREBASE_API_KEY,
-          hasProjectId: !!window.FIREBASE_PROJECT_ID
-        });
-
         const ok = await window.loadFirebaseConfig();
         if (!ok) throw new Error('Firebase configuration failed to load');
-
-        // Debug: after loading config
-        console.log('After loading config:', {
-          apiKey: window.FIREBASE_API_KEY ? 'Loaded' : 'Missing',
-          projectId: window.FIREBASE_PROJECT_ID ? 'Loaded' : 'Missing',
-          authDomain: window.FIREBASE_AUTH_DOMAIN
-        });
 
         const cfg = {
           apiKey: window.FIREBASE_API_KEY,
@@ -294,7 +413,6 @@
           messagingSenderId: window.FIREBASE_MESSAGING_SENDER_ID,
           appId: window.FIREBASE_APP_ID,
         };
-        console.log('Firebase config:', cfg);
 
         if (!cfg.apiKey || !cfg.projectId) {
           const error = 'Missing Firebase config. Check Vercel environment variables.';
@@ -315,6 +433,12 @@
         }
 
         const form = document.getElementById('registrationForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        
+        // Setup real-time validation
+        window.setupRealTimeValidation(form);
+
         const toast = (() => {
           let el = document.getElementById('popup');
           if (!el) {
@@ -339,8 +463,25 @@
           };
         })();
 
+        // Form submission handler
         form?.addEventListener('submit', async (e) => {
           e.preventDefault();
+          
+          // Validate form before submission
+          if (!window.validateForm(form)) {
+            window.showToast('Please fill all required fields correctly.', 'error');
+            // Scroll to first error
+            const firstError = form.querySelector('.error');
+            if (firstError) {
+              firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            return;
+          }
+
+          // Disable submit button to prevent multiple submissions
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Submitting...';
+
           const fd = new FormData(form);
           const data = Object.fromEntries(fd.entries());
 
@@ -393,13 +534,27 @@
             await setDoc(doc(db, 'records', formNumber), record);
             console.log('Record saved successfully');
 
-            toast.show(`Form submitted. Your Form Number is ${formNumber}. Save it to view/download later in Form View.`, 'success');
+            toast.show(`Form submitted successfully! Your Form Number is ${formNumber}. Save it to view/download later in Form View.`, 'success');
             form.reset();
+            
           } catch (err) {
             console.error('Form submission error:', err);
             toast.show('Could not submit the form. Please try again.', 'error');
+          } finally {
+            // Re-enable submit button
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit';
           }
         });
+
+        // Reset button handler
+        resetBtn?.addEventListener('click', () => {
+          // Clear all error states
+          form.querySelectorAll('.field').forEach(field => {
+            field.classList.remove('error');
+          });
+        });
+
       } catch (error) {
         console.error('Critical error in module:', error);
         window.showSiteError('Application failed to initialize. Please refresh the page.');
