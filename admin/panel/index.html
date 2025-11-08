@@ -231,7 +231,7 @@
       for (const r of rows) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td class="nowrap">${r.form_number || r.id}</td>
+          <td class="nowrap">${r.id}</td>
           <td>${escapeHtml(r.full_name)}</td>
           <td>${escapeHtml(r.email)}</td>
           <td>${escapeHtml(r.phone)}</td>
@@ -273,7 +273,7 @@
       details.classList.remove('hidden');
       details.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
-          <h3 style="margin:0;">Form #${escapeHtml(r.form_number || r.id)}</h3>
+          <h3 style="margin:0;">Form #${escapeHtml(r.id)}</h3>
           <div>
             <button class="btn" id="detailPdfBtn">Download PDF</button>
             <button class="btn ghost" id="viewMoreBtn">View More</button>
@@ -306,7 +306,7 @@
 
     function recordToLines(r) {
       return [
-        ['Form #', r.form_number || r.id],
+        ['Form #', r.id],
         ['Full Name', r.full_name],
         ["Father's Name", r.father_name],
         ["Mother's Name", r.mother_name],
@@ -347,7 +347,7 @@
       const doc = new jsPDF();
       let y = 14;
       doc.setFontSize(16); doc.text(`SJR MUN Registration`, 14, y); y += 8;
-      doc.setFontSize(12); doc.text(`Form # ${r.form_number || r.id}`, 14, y); y += 8;
+      doc.setFontSize(12); doc.text(`Form # ${r.id}`, 14, y); y += 8;
       doc.setDrawColor(200); doc.line(14, y, 196, y); y += 6;
       doc.setFontSize(11);
       for (const [k,v] of recordToLines(r)) {
@@ -355,7 +355,7 @@
         doc.text(lines, 14, y); y += 6 + (lines.length-1)*5;
         if (y > 280) { doc.addPage(); y = 14; }
       }
-      doc.save(`form_${r.form_number || r.id}.pdf`);
+      doc.save(`form_${r.id}.pdf`);
     }
 
     document.getElementById('exportPdfAllBtn').addEventListener('click', () => {
@@ -365,7 +365,7 @@
       doc.setFontSize(16); doc.text('All Registrations', 14, y); y += 8;
       doc.setDrawColor(200); doc.line(14, y, 196, y); y += 6;
       for (const r of allRecords) {
-        doc.setFontSize(12); doc.text(`Form # ${r.form_number || r.id} - ${r.full_name||''}`, 14, y); y += 6;
+        doc.setFontSize(12); doc.text(`Form # ${r.id} - ${r.full_name||''}`, 14, y); y += 6;
         doc.setFontSize(10);
         const lines = recordToLines(r);
         for (const [k,v] of lines) {
@@ -384,7 +384,7 @@
     document.getElementById('exportXlsxBtn').addEventListener('click', () => {
       if (!allRecords.length) return showToast('No data', 'error');
       const data = allRecords.map(r => ({
-        form_number: r.form_number || r.id,
+        form_number: r.id,
         full_name: r.full_name,
         father_name: r.father_name,
         mother_name: r.mother_name,
