@@ -78,8 +78,8 @@
   let slides = [];
   let rafId;
   function setupScroll(){
-    const imageDisplayRatio = 0.8;
-    const transitionRatio = 0.2;
+    const imageDisplayRatio = 1;
+    const transitionRatio = 0;
     let lastIndex = -1;
 
     function loop(){
@@ -104,17 +104,9 @@
         else counterEl.classList.add('hidden');
       }
 
-      // index calc
+      // index calc (snap instantly to each slide)
       const n = slides.length;
-      let index = 0, cum = 0;
-      for(let i=0;i<n;i++){
-        cum += imageDisplayRatio / n;
-        if(progress < cum){ index = i; break; }
-        if(i < n-1){
-          cum += transitionRatio / (n-1);
-          if(progress < cum){ index = i; break; }
-        } else index = i;
-      }
+      let index = Math.min(Math.floor(progress * n), n - 1);
 
       if(index !== lastIndex){
         slides.forEach((s,i)=>s.classList.toggle('active', i===index));
