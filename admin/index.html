@@ -174,7 +174,7 @@
 
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        window.location.href = 'admin/panel';
+        window.location.href = 'panel';
       }
     });
 
@@ -186,7 +186,7 @@
       const password = fd.get('password');
       try {
         await signInWithEmailAndPassword(auth, email, password);
-        window.location.href = 'admin/panel';
+        window.location.href = 'panel';
       } catch (err) {
         showToast('Login failed. Please check your credentials.', 'error');
         console.error(err);
@@ -212,7 +212,7 @@
       const provider = new GoogleAuthProvider();
       try {
         await signInWithPopup(auth, provider);
-        window.location.href = 'admin/panel';
+        window.location.href = 'panel';
       } catch (err) {
         showToast('Google login failed.', 'error');
         console.error(err);
