@@ -263,7 +263,51 @@
     .social-btn.admin:hover {
       background: rgba(158, 240, 26, 0.2);
     }
-    
+
+    .debug-panel {
+      margin-top: 20px;
+      padding: 16px;
+      background: rgba(139, 0, 0, 0.1);
+      border: 1px solid rgba(139, 0, 0, 0.3);
+      border-radius: 8px;
+      font-size: 12px;
+      color: #cbd5e1;
+    }
+
+    .debug-panel.hidden {
+      display: none;
+    }
+
+    .debug-log {
+      max-height: 200px;
+      overflow-y: auto;
+      background: #0b1220;
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 8px;
+      font-family: monospace;
+      font-size: 11px;
+      border: 1px solid #1f2937;
+    }
+
+    .debug-entry {
+      margin-bottom: 4px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #1f2937;
+    }
+
+    .debug-entry.error {
+      color: #ef4444;
+    }
+
+    .debug-entry.success {
+      color: #9ef01a;
+    }
+
+    .debug-entry.info {
+      color: #60a5fa;
+    }
+
     @media (max-width: 768px) {
       .view-card {
         padding: 24px;
@@ -324,8 +368,20 @@
         </div>
         <div class="actions">
           <button type="submit" class="btn primary">Search</button>
+          <button type="button" id="debugBtn" class="btn ghost" style="font-size: 12px;">
+            Debug Connection
+          </button>
         </div>
       </form>
+
+      <!-- Debug Panel -->
+      <div id="debugPanel" class="debug-panel hidden">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <strong>Debug Information</strong>
+          <button id="clearDebug" class="btn ghost" style="font-size: 10px; padding: 4px 8px;">Clear</button>
+        </div>
+        <div id="debugLog" class="debug-log"></div>
+      </div>
 
       <div id="matches" class="hidden" style="margin-top: 24px;">
         <label class="field">
@@ -412,37 +468,70 @@
   </script>
   
   <script>
+    // Debug logging system
+    window.debugLog = [];
+    
+    function addDebugLog(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = { timestamp, message, type };
+      window.debugLog.push(logEntry);
+      
+      // Update debug panel if visible
+      const debugLogElement = document.getElementById('debugLog');
+      if (debugLogElement) {
+        const entryElement = document.createElement('div');
+        entryElement.className = `debug-entry ${type}`;
+        entryElement.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+        debugLogElement.appendChild(entryElement);
+        debugLogElement.scrollTop = debugLogElement.scrollHeight;
+      }
+      
+      console.log(`[${type.toUpperCase()}] ${message}`);
+    }
+
     window.loadFirebaseConfig = async function loadFirebaseConfig(){
       try {
-        if (window.FIREBASE_API_KEY && window.FIREBASE_PROJECT_ID) return true;
+        addDebugLog('Loading Firebase configuration...', 'info');
+        
+        // Check if already loaded
+        if (window.FIREBASE_API_KEY && window.FIREBASE_PROJECT_ID) {
+          addDebugLog('Firebase config already loaded', 'success');
+          return true;
+        }
+        
+        addDebugLog('Fetching config from ../api/env', 'info');
         const res = await fetch('../api/env');
-        if (!res.ok) throw new Error('HTTP ' + res.status);
+        
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`HTTP ${res.status}: ${errorText}`);
+        }
+        
         const cfg = await res.json();
-        if (!cfg.FIREBASE_API_KEY || !cfg.FIREBASE_PROJECT_ID) throw new Error('Missing required Firebase configuration');
+        addDebugLog('Received config from API', 'success');
+        addDebugLog(`Project ID: ${cfg.FIREBASE_PROJECT_ID}`, 'info');
+        
+        if (!cfg.FIREBASE_API_KEY || !cfg.FIREBASE_PROJECT_ID) {
+          throw new Error('Missing required Firebase configuration (API_KEY or PROJECT_ID)');
+        }
+        
+        // Set all config values
         window.FIREBASE_API_KEY = cfg.FIREBASE_API_KEY;
-        window.FIREBASE_AUTH_DOMAIN = cfg.FIREBASE_AUTH_DOMAIN;
+        window.FIREBASE_AUTH_DOMAIN = cfg.FIREBASE_AUTH_DOMAIN || `${cfg.FIREBASE_PROJECT_ID}.firebaseapp.com`;
         window.FIREBASE_PROJECT_ID = cfg.FIREBASE_PROJECT_ID;
-        window.FIREBASE_STORAGE_BUCKET = cfg.FIREBASE_STORAGE_BUCKET;
+        window.FIREBASE_STORAGE_BUCKET = cfg.FIREBASE_STORAGE_BUCKET || `${cfg.FIREBASE_PROJECT_ID}.appspot.com`;
         window.FIREBASE_MESSAGING_SENDER_ID = cfg.FIREBASE_MESSAGING_SENDER_ID;
         window.FIREBASE_APP_ID = cfg.FIREBASE_APP_ID;
+        
+        addDebugLog('Firebase configuration loaded successfully', 'success');
         return true;
+        
       } catch (err) {
-        console.error('Failed to load Firebase config:', err);
-        showToast('Application configuration error. Please contact administrator.', 'error');
+        addDebugLog(`Failed to load Firebase config: ${err.message}`, 'error');
+        showToast('Configuration error: ' + err.message, 'error');
         return false;
       }
     }
-  </script>
-  
-  <script>
-    window.env = {
-      FIREBASE_API_KEY: window.FIREBASE_API_KEY || "",
-      FIREBASE_AUTH_DOMAIN: window.FIREBASE_AUTH_DOMAIN || "",
-      FIREBASE_PROJECT_ID: window.FIREBASE_PROJECT_ID || "",
-      FIREBASE_STORAGE_BUCKET: window.FIREBASE_STORAGE_BUCKET || "",
-      FIREBASE_MESSAGING_SENDER_ID: window.FIREBASE_MESSAGING_SENDER_ID || "",
-      FIREBASE_APP_ID: window.FIREBASE_APP_ID || ""
-    };
   </script>
   
   <script type="module">
@@ -450,21 +539,7 @@
     import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore-lite.js";
     import { jsPDF } from "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.es.min.js";
 
-    const ok = await window.loadFirebaseConfig();
-    if (!ok) throw new Error('Firebase configuration failed to load');
-    
-    const cfg = {
-      apiKey: window.FIREBASE_API_KEY,
-      authDomain: window.FIREBASE_AUTH_DOMAIN,
-      projectId: window.FIREBASE_PROJECT_ID,
-      storageBucket: window.FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: window.FIREBASE_MESSAGING_SENDER_ID,
-      appId: window.FIREBASE_APP_ID,
-    };
-    
-    const app = initializeApp(cfg);
-    const db = getFirestore(app);
-
+    // DOM elements
     const form = document.getElementById('lookupForm');
     const result = document.getElementById('result');
     const kvPanel = document.getElementById('kvPanel');
@@ -477,12 +552,93 @@
     const inputForm = fieldFormNumber.querySelector('input');
     const inputEmail = fieldEmail.querySelector('input');
     const inputPhone = fieldPhone.querySelector('input');
+    const debugBtn = document.getElementById('debugBtn');
+    const debugPanel = document.getElementById('debugPanel');
+    const clearDebug = document.getElementById('clearDebug');
 
     let currentRecord = null;
     let currentMatches = [];
+    let db = null;
 
+    // Initialize Firebase
+    async function initializeFirebase() {
+      try {
+        addDebugLog('Initializing Firebase...', 'info');
+        
+        const ok = await window.loadFirebaseConfig();
+        if (!ok) {
+          throw new Error('Firebase configuration failed to load');
+        }
+        
+        const cfg = {
+          apiKey: window.FIREBASE_API_KEY,
+          authDomain: window.FIREBASE_AUTH_DOMAIN,
+          projectId: window.FIREBASE_PROJECT_ID,
+          storageBucket: window.FIREBASE_STORAGE_BUCKET,
+          messagingSenderId: window.FIREBASE_MESSAGING_SENDER_ID,
+          appId: window.FIREBASE_APP_ID,
+        };
+        
+        addDebugLog('Firebase config validated', 'success');
+        const app = initializeApp(cfg);
+        db = getFirestore(app);
+        addDebugLog('Firebase Firestore initialized successfully', 'success');
+        
+        return true;
+      } catch (error) {
+        addDebugLog(`Firebase initialization failed: ${error.message}`, 'error');
+        showToast('Firebase initialization failed: ' + error.message, 'error');
+        return false;
+      }
+    }
+
+    // Debug connection test
+    async function debugFirebaseConnection() {
+      addDebugLog('Testing Firebase connection...', 'info');
+      
+      if (!db) {
+        addDebugLog('Firebase not initialized', 'error');
+        showToast('Firebase not initialized', 'error');
+        return;
+      }
+      
+      try {
+        // Test with a sample document
+        const testDocId = '000001';
+        addDebugLog(`Testing document: records/${testDocId}`, 'info');
+        
+        const snap = await getDoc(doc(db, 'records', testDocId));
+        
+        if (snap.exists()) {
+          const data = snap.data();
+          addDebugLog(`✓ Document exists with data: ${JSON.stringify(data).substring(0, 100)}...`, 'success');
+          addDebugLog(`Available fields: ${Object.keys(data).join(', ')}`, 'info');
+        } else {
+          addDebugLog('✗ Document does not exist', 'error');
+          addDebugLog('Please check if the document exists in Firestore', 'info');
+        }
+        
+        // Test collection query
+        addDebugLog('Testing collection query...', 'info');
+        const q = query(collection(db, 'records'));
+        const querySnap = await getDocs(q);
+        addDebugLog(`Total documents in collection: ${querySnap.docs.length}`, 'info');
+        
+        if (querySnap.docs.length > 0) {
+          querySnap.docs.slice(0, 3).forEach((doc, index) => {
+            addDebugLog(`Sample doc ${index + 1}: ${doc.id}`, 'info');
+          });
+        }
+        
+      } catch (error) {
+        addDebugLog(`Connection test failed: ${error.message}`, 'error');
+      }
+    }
+
+    // Form input management
     function updateInputs() {
       const mode = searchBy.value;
+      addDebugLog(`Search mode changed to: ${mode}`, 'info');
       
       // Reset all fields
       fieldFormNumber.classList.add('hidden');
@@ -513,14 +669,8 @@
       kvPanel.innerHTML = '';
     }
 
-    // Initialize the form
-    updateInputs();
-    
-    // Update inputs when search type changes
-    searchBy.addEventListener('change', updateInputs);
-
     // Form submission handler
-    form.addEventListener('submit', async (e) => {
+    async function handleFormSubmit(e) {
       e.preventDefault();
       
       const mode = searchBy.value;
@@ -547,36 +697,54 @@
         }
       }
       
+      addDebugLog(`Searching by ${mode} for: "${queryValue}"`, 'info');
+      
       try {
+        if (!db) {
+          throw new Error('Database not initialized');
+        }
+        
         if (mode === 'form_number') {
           // Pad with zeros to ensure 6-digit format
           const id = String(queryValue).padStart(6, '0');
+          addDebugLog(`Looking up document ID: ${id}`, 'info');
+          
           const snap = await getDoc(doc(db, 'records', id));
+          addDebugLog(`Document exists: ${snap.exists()}`, 'info');
           
           if (!snap.exists()) {
             showToast('No record found for that form number.', 'error');
+            addDebugLog('No document found with that ID', 'error');
             return;
           }
           
           currentRecord = { id, ...snap.data() };
+          addDebugLog(`Found record: ${JSON.stringify(currentRecord).substring(0, 150)}...`, 'success');
           showRecord(currentRecord);
+          
         } else if (mode === 'email') {
+          addDebugLog('Querying by email...', 'info');
           const qy = query(collection(db, 'records'), where('email', '==', queryValue));
           const snaps = await getDocs(qy);
+          addDebugLog(`Found ${snaps.docs.length} matches for email`, 'info');
           handleMatches(snaps);
+          
         } else if (mode === 'phone') {
+          addDebugLog('Querying by phone...', 'info');
           const qy = query(collection(db, 'records'), where('phone', '==', queryValue));
           const snaps = await getDocs(qy);
+          addDebugLog(`Found ${snaps.docs.length} matches for phone`, 'info');
           handleMatches(snaps);
         }
       } catch (err) {
-        console.error('Search error:', err);
-        showToast('Failed to search records. Please try again.', 'error');
+        addDebugLog(`Search error: ${err.message}`, 'error');
+        showToast('Failed to search records: ' + err.message, 'error');
       }
-    });
+    }
 
     function handleMatches(snaps) {
       currentMatches = snaps.docs.map(d => ({ id: d.id, ...d.data() }));
+      addDebugLog(`Processing ${currentMatches.length} matches`, 'info');
       
       if (!currentMatches.length) {
         matches.classList.add('hidden');
@@ -588,6 +756,7 @@
       if (currentMatches.length === 1) {
         // If only one match, show it directly
         currentRecord = currentMatches[0];
+        addDebugLog(`Single match found: ${currentRecord.id}`, 'success');
         showRecord(currentRecord);
         matches.classList.add('hidden');
         return;
@@ -600,19 +769,11 @@
       
       matches.classList.remove('hidden');
       result.classList.add('hidden');
+      addDebugLog(`Showing ${currentMatches.length} matches in dropdown`, 'success');
     }
 
-    matchSelect.addEventListener('change', () => {
-      const id = matchSelect.value;
-      const rec = currentMatches.find(r => r.id === id);
-      
-      if (rec) {
-        currentRecord = rec;
-        showRecord(currentRecord);
-      }
-    });
-
     function showRecord(r) {
+      addDebugLog(`Displaying record: ${r.id}`, 'info');
       result.classList.remove('hidden');
       
       const entries = [
@@ -637,6 +798,8 @@
         <div class="k">${escapeHtml(k)}</div>
         <div>${escapeHtml(v || 'Not provided')}</div>
       `).join('');
+      
+      addDebugLog('Record displayed successfully', 'success');
     }
 
     function escapeHtml(s = '') { 
@@ -645,11 +808,50 @@
       ); 
     }
 
-    document.getElementById('downloadPdfBtn').addEventListener('click', () => {
+    // Event listeners
+    function setupEventListeners() {
+      searchBy.addEventListener('change', updateInputs);
+      form.addEventListener('submit', handleFormSubmit);
+      matchSelect.addEventListener('change', handleMatchSelect);
+      debugBtn.addEventListener('click', handleDebugClick);
+      clearDebug.addEventListener('click', handleClearDebug);
+      
+      document.getElementById('downloadPdfBtn').addEventListener('click', handleDownloadPdf);
+    }
+
+    function handleMatchSelect() {
+      const id = matchSelect.value;
+      const rec = currentMatches.find(r => r.id === id);
+      
+      if (rec) {
+        currentRecord = rec;
+        addDebugLog(`Selected record: ${id}`, 'info');
+        showRecord(currentRecord);
+      }
+    }
+
+    function handleDebugClick() {
+      debugPanel.classList.toggle('hidden');
+      if (!debugPanel.classList.contains('hidden')) {
+        debugFirebaseConnection();
+      }
+    }
+
+    function handleClearDebug() {
+      const debugLogElement = document.getElementById('debugLog');
+      if (debugLogElement) {
+        debugLogElement.innerHTML = '';
+      }
+      window.debugLog = [];
+    }
+
+    function handleDownloadPdf() {
       if (!currentRecord) {
         showToast('No record to download.', 'error');
         return;
       }
+      
+      addDebugLog('Generating PDF...', 'info');
       
       const r = currentRecord;
       const doc = new jsPDF();
@@ -702,9 +904,32 @@
       }
       
       // Save the PDF
-      doc.save(`sjr_mun_form_${r.form_number || r.id}.pdf`);
+      const filename = `sjr_mun_form_${r.form_number || r.id}.pdf`;
+      doc.save(filename);
+      addDebugLog(`PDF downloaded: ${filename}`, 'success');
       showToast('PDF downloaded successfully!', 'success');
-    });
+    }
+
+    // Initialize the application
+    async function init() {
+      addDebugLog('Initializing application...', 'info');
+      
+      // Initialize form state
+      updateInputs();
+      setupEventListeners();
+      
+      // Initialize Firebase
+      const firebaseReady = await initializeFirebase();
+      if (firebaseReady) {
+        addDebugLog('Application ready', 'success');
+        showToast('Application loaded successfully!', 'success');
+      } else {
+        addDebugLog('Application initialization failed', 'error');
+      }
+    }
+
+    // Start the application
+    init();
   </script>
 </body>
 </html>
