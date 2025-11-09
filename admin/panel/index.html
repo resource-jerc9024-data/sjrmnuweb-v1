@@ -49,6 +49,9 @@
     .loading { display: flex; justify-content: center; align-items: center; padding: 40px; }
     .loading-spinner { width: 40px; height: 40px; border: 4px solid #1f2937; border-left: 4px solid #9ef01a; border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* Auth pending state */
+    .auth-loading { display: flex; justify-content: center; align-items: center; min-height: 200px; flex-direction: column; gap: 16px; }
   </style>
 </head>
 <body class="auth-pending">
@@ -65,42 +68,49 @@
 
     <div class="content">
       <div class="card">
-        <div class="toolbar">
-          <input id="searchInput" class="searchbar" type="text" placeholder="Search by form number, name, or phone" />
-          <button id="refreshBtn" class="btn ghost">Refresh</button>
-          <button id="exportXlsxBtn" class="btn ghost">Export Excel</button>
-          <button id="exportPdfAllBtn" class="btn">Export All PDF</button>
+        <div id="authLoading" class="auth-loading">
+          <div class="loading-spinner"></div>
+          <div>Checking authentication...</div>
         </div>
+        
+        <div id="mainContent" class="hidden">
+          <div class="toolbar">
+            <input id="searchInput" class="searchbar" type="text" placeholder="Search by form number, name, or phone" />
+            <button id="refreshBtn" class="btn ghost">Refresh</button>
+            <button id="exportXlsxBtn" class="btn ghost">Export Excel</button>
+            <button id="exportPdfAllBtn" class="btn">Export All PDF</button>
+          </div>
 
-        <div class="muted">Path: DB/records/{form-number}</div>
+          <div class="muted">Path: DB/records/{form-number}</div>
 
-        <div class="table-wrap">
-          <table class="table" id="recordsTable">
-            <thead>
-              <tr>
-                <th class="nowrap">Form #</th>
-                <th>Name</th>
-                <th>Phone</th>
-                <th>Class & Section</th>
-                <th>School</th>
-                <th>Category</th>
-                <th class="nowrap">Created</th>
-                <th class="nowrap">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="recordsTbody">
-              <tr>
-                <td colspan="8">
-                  <div class="loading">
-                    <div class="loading-spinner"></div>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="table-wrap">
+            <table class="table" id="recordsTable">
+              <thead>
+                <tr>
+                  <th class="nowrap">Form #</th>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>Class & Section</th>
+                  <th>School</th>
+                  <th>Category</th>
+                  <th class="nowrap">Created</th>
+                  <th class="nowrap">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="recordsTbody">
+                <tr>
+                  <td colspan="8">
+                    <div class="loading">
+                      <div class="loading-spinner"></div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div id="detailsPanel" class="details hidden"></div>
         </div>
-
-        <div id="detailsPanel" class="details hidden"></div>
       </div>
     </div>
   </div>
@@ -125,10 +135,7 @@
     import { 
       getAuth, 
       onAuthStateChanged, 
-      signOut, 
-      setPersistence, 
-      browserSessionPersistence,
-      browserLocalPersistence 
+      signOut
     } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
     import { getFirestore, collection, getDocs, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
     
@@ -147,49 +154,6 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-
-    // Set persistence to LOCAL to maintain login state
-    async function initializeAuth() {
-      try {
-        // Set persistence BEFORE any other auth operations
-        await setPersistence(auth, browserLocalPersistence);
-        console.log('[Auth] Persistence set to LOCAL successfully');
-        return true;
-      } catch (error) {
-        console.error('[Auth] Persistence error:', error);
-        // Don't fallback to session, just continue
-        return false;
-      }
-    }
-
-    // Improved auth state recovery
-    async function recoverAuthState() {
-      try {
-        // Wait for auth to be ready
-        await auth.authStateReady();
-        const user = auth.currentUser;
-        
-        if (user) {
-          console.log('[Auth] Recovered user from persistence:', user.email);
-          handleAuthStateChange(user);
-        } else {
-          console.log('[Auth] No persisted user found');
-          document.body.classList.remove('auth-pending');
-          // Don't redirect immediately, give time for auth state to settle
-          setTimeout(() => {
-            if (!auth.currentUser) {
-              window.location.href = '../';
-            }
-          }, 1500);
-        }
-      } catch (error) {
-        console.error('[Auth] Recovery error:', error);
-        document.body.classList.remove('auth-pending');
-        setTimeout(() => {
-          window.location.href = '../';
-        }, 2000);
-      }
-    }
 
     // Toast notification system
     function ensureToast(){
@@ -221,91 +185,95 @@
     const details = document.getElementById('detailsPanel');
     const searchInput = document.getElementById('searchInput');
     const logoutBtn = document.getElementById('logoutBtn');
+    const authLoading = document.getElementById('authLoading');
+    const mainContent = document.getElementById('mainContent');
 
     let allRecords = [];
     let unsubscribe = null;
-    let authInitialized = false;
+    let authChecked = false;
 
-    // Initialize auth and set up state listener
-    async function initApp() {
-      try {
-        await initializeAuth();
-        authInitialized = true;
+    // SIMPLIFIED AUTH HANDLING - This is the key fix
+    function initApp() {
+      console.log('[Auth] Initializing authentication...');
+      
+      // Set a timeout to show we're checking auth
+      const authTimeout = setTimeout(() => {
+        if (!authChecked) {
+          console.log('[Auth] Auth check taking longer than expected...');
+        }
+      }, 2000);
+
+      // Listen for auth state changes - SIMPLIFIED VERSION
+      onAuthStateChanged(auth, (user) => {
+        clearTimeout(authTimeout);
+        authChecked = true;
         
-        // Use recovery approach instead of immediate listener
-        await recoverAuthState();
+        console.log('[Auth] Auth state changed:', user ? `User: ${user.email}` : 'No user');
         
-      } catch (error) {
-        console.error('[App] Initialization error:', error);
-        showToast('Application initialization failed', 'error');
-        // Don't redirect immediately, let user see the error
-        document.body.classList.remove('auth-pending');
-      }
+        if (user) {
+          // User is signed in
+          handleUserAuthenticated(user);
+        } else {
+          // No user is signed in
+          handleNoUser();
+        }
+      }, (error) => {
+        clearTimeout(authTimeout);
+        authChecked = true;
+        console.error('[Auth] Auth state error:', error);
+        
+        // For auth errors, don't redirect immediately - show error and retry
+        showToast('Authentication error. Please refresh the page.', 'error');
+        
+        // Set a retry mechanism
+        setTimeout(() => {
+          const currentUser = auth.currentUser;
+          if (currentUser) {
+            console.log('[Auth] Retry successful, user found:', currentUser.email);
+            handleUserAuthenticated(currentUser);
+          } else {
+            console.log('[Auth] Retry failed, redirecting to login...');
+            window.location.href = '../';
+          }
+        }, 3000);
+      });
     }
 
-    // Improved authentication state changes handler
-    function handleAuthStateChange(user) {
-      console.log('[Auth] State changed:', user ? `User: ${user.email}` : 'No user');
-      
-      if (!user) { 
-        console.log('[Auth] No user found, checking if this is initial state...');
-        
-        // Add a delay to prevent immediate redirect on page load
-        setTimeout(() => {
-          // Double-check auth state after delay
-          const currentUser = auth.currentUser;
-          if (!currentUser) {
-            console.log('[Auth] Confirmed no user, redirecting to login...');
-            window.location.href = '../';
-          } else {
-            console.log('[Auth] User recovered after delay:', currentUser.email);
-            document.body.classList.remove('auth-pending');
-            loadRecords();
-            setupRealtimeListener();
-          }
-        }, 1000);
-        return; 
-      }
-      
-      // User is authenticated
+    function handleUserAuthenticated(user) {
       console.log('[Auth] User authenticated successfully:', user.email);
+      
+      // Remove auth pending state
       document.body.classList.remove('auth-pending');
+      authLoading.classList.add('hidden');
+      mainContent.classList.remove('hidden');
+      
+      // Load data
       loadRecords();
       setupRealtimeListener();
+      
+      showToast(`Welcome back, ${user.email}`, 'success');
     }
 
-    // Improved authentication error handler
-    function handleAuthError(error) {
-      console.error('[Auth] Auth state error:', error);
+    function handleNoUser() {
+      console.log('[Auth] No user found, checking if this is a temporary state...');
       
-      // Handle different error types appropriately
-      switch (error.code) {
-        case 'auth/network-request-failed':
-          showToast('Network error - check connection', 'error');
-          // Retry auth state check after delay
-          setTimeout(() => {
-            const user = auth.currentUser;
-            if (user) {
-              console.log('[Auth] Recovered after network error:', user.email);
-              handleAuthStateChange(user);
-            }
-          }, 3000);
-          break;
-          
-        case 'auth/web-storage-unsupported':
-          showToast('Browser storage not supported - some features limited', 'error');
-          // Continue without persistence
-          break;
-          
-        default:
-          console.error('[Auth] Unhandled auth error:', error);
-          // Only redirect for actual auth failures, not temporary issues
-          if (error.code?.startsWith('auth/')) {
-            setTimeout(() => {
-              window.location.href = '../';
-            }, 3000);
-          }
-      }
+      // Double check after a short delay to avoid false negatives
+      setTimeout(() => {
+        const currentUser = auth.currentUser;
+        if (currentUser) {
+          console.log('[Auth] User recovered after delay:', currentUser.email);
+          handleUserAuthenticated(currentUser);
+          return;
+        }
+        
+        console.log('[Auth] Confirmed no user, redirecting to login...');
+        showToast('Please login to continue', 'error');
+        
+        // Short delay before redirect to let user see the message
+        setTimeout(() => {
+          window.location.href = '../';
+        }, 1500);
+      }, 1000);
     }
 
     // Setup real-time listener for new records
@@ -341,12 +309,9 @@
         if (unsubscribe) {
           unsubscribe();
         }
+        showToast('Logging out...', 'success');
         await signOut(auth);
-        showToast('Logged out successfully', 'success');
-        // Let the auth state change handler handle the redirect
-        setTimeout(() => {
-          window.location.href = '../';
-        }, 1000);
+        // Redirect will happen automatically via auth state listener
       } catch (error) {
         console.error('Logout error:', error);
         showToast('Error during logout', 'error');
@@ -662,18 +627,6 @@
         unsubscribe();
       }
     });
-
-    // Detect page visibility changes
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && auth.currentUser) {
-        // Page became visible again, refresh data
-        console.log('[App] Page visible, refreshing data...');
-        loadRecords();
-      }
-    });
-
-    // Set up auth state listener for future changes
-    onAuthStateChanged(auth, handleAuthStateChange, handleAuthError);
 
     // Initialize the application
     initApp();
