@@ -162,19 +162,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
 
-    // Redirect function - Solution 3
-    function redirectToPanel() {
-      const currentPath = window.location.pathname;
-      
-      // If already in admin directory, use relative path
-      if (currentPath.includes('/admin/')) {
-        window.location.href = 'panel';
-      } else {
-        // If not in admin directory, use absolute path
-        window.location.href = '/admin/panel';
-      }
-    }
-
     const ok = await window.loadFirebaseConfig();
     if (!ok) throw new Error('Firebase configuration failed to load');
     const cfg = {
@@ -190,7 +177,7 @@
 
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        redirectToPanel();
+        window.location.href = 'panel';
       }
     });
 
@@ -202,7 +189,7 @@
       const password = fd.get('password');
       try {
         await signInWithEmailAndPassword(auth, email, password);
-        redirectToPanel();
+        window.location.href = 'panel';
       } catch (err) {
         showToast('Login failed. Please check your credentials.', 'error');
         console.error(err);
