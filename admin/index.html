@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Admin Login SJR MUN</title>
-  <!-- REMOVED CSP - Matching index.html -->
+  <title>Admin Login SJR MNU </title>
   <link rel="stylesheet" href="../handler/styles.css" />
   <link rel="icon" type="image/x-icon" href="../favicon.ico" />
   <style>
@@ -53,9 +52,9 @@
 <body>
   <div class="auth-shell">
     <div class="auth-card">
-      <!-- Logout Message - Only show if user was manually logged out -->
+      <!-- Logout Message -->
       <div id="logoutMessage" class="logout-message">
-        You have been logged out. Please sign in again to continue.
+        You have been automatically logged out. Please sign in again to continue.
       </div>
       
       <div class="brand">
@@ -133,6 +132,9 @@
   </script>
   
   <script>
+    // Session flag to track auto-logout
+    window.autoLoggedOut = false;
+    
     // Firebase configuration loader from /api/env
     window.loadFirebaseConfig = async function loadFirebaseConfig() {
       try {
@@ -222,14 +224,15 @@
       doc,
       getDoc,
       setDoc
-    } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore-lite.js";
+    } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 
     let auth = null;
     let app = null;
     let db = null;
+    let isAutoLogoutInProgress = false;
     let isInitialized = false;
 
-    // Initialize Firebase Auth and Firestore Lite
+    // Initialize Firebase Auth and Firestore
     async function initializeFirebaseAuth() {
       try {
         // Load Firebase configuration from API
@@ -243,7 +246,7 @@
         // Set session persistence
         await setPersistence(auth, browserSessionPersistence);
         
-        console.log('[Auth] Firebase Auth and Firestore Lite initialized successfully');
+        console.log('[Auth] Firebase Auth and Firestore initialized successfully');
         isInitialized = true;
         setupAuthListeners();
         enableLoginButtons();
@@ -256,79 +259,60 @@
       }
     }
 
-    // Check if user exists in Firestore
-    async function checkUserExists(userId) {
-      try {
-        if (!db) {
-          console.error('[Firestore] Database not initialized');
-          return false;
-        }
-
-        const userRef = doc(db, 'users', userId);
-        const userSnap = await getDoc(userRef);
+    // Auto-logout user when they open login page
+    async function autoLogoutUser() {
+      if (isAutoLogoutInProgress || !auth) return;
+      
+      isAutoLogoutInProgress = true;
+      const user = auth.currentUser;
+      
+      if (user) {
+        console.log('[Auth] Auto-logging out user who opened login page:', user.email);
         
-        return userSnap.exists();
-      } catch (error) {
-        console.error('[Auth] Error checking user existence:', error);
-        return false;
+        try {
+          await signOut(auth);
+          window.autoLoggedOut = true;
+          
+          // Show logout message
+          const logoutMessage = document.getElementById('logoutMessage');
+          if (logoutMessage) {
+            logoutMessage.style.display = 'block';
+          }
+          
+          console.log('[Auth] Auto-logout completed successfully');
+          showToast('You have been logged out. Please sign in again.', 'success');
+          
+        } catch (error) {
+          console.error('[Auth] Auto-logout failed:', error);
+          showToast('Auto-logout failed. Please try manual logout.', 'error');
+        } finally {
+          isAutoLogoutInProgress = false;
+        }
+      } else {
+        isAutoLogoutInProgress = false;
       }
     }
 
-    // Create or update user document in Firestore (ONLY for existing users)
-    async function updateUserDocument(user) {
-      try {
-        if (!db) {
-          console.error('[Firestore] Database not initialized');
-          return;
-        }
-
-        const userRef = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
-        
-        if (userSnap.exists()) {
-          // Update last login time for existing user
-          await setDoc(userRef, {
-            lastLoginAt: new Date().toISOString(),
-            email: user.email,
-            displayName: user.displayName || '',
-            photoURL: user.photoURL || ''
-          }, { merge: true });
-          console.log('[Firestore] User document updated:', user.uid);
-          return true;
-        } else {
-          // User doesn't exist in Firestore - don't create new document
-          console.log('[Auth] User not found in Firestore, access denied:', user.email);
-          return false;
-        }
-      } catch (error) {
-        console.error('[Firestore] Error updating user document:', error);
-        return false;
-      }
-    }
-
-    // Setup authentication state listener - REMOVED AUTO-LOGOUT
+    // Setup authentication state listener
     function setupAuthListeners() {
       if (!auth) return;
       
       onAuthStateChanged(auth, (user) => {
         if (user) {
           console.log('[Auth] User is signed in:', user.email);
-          // User is already signed in - redirect them to admin panel immediately
-          redirectToAdminPanel();
+          
+          // If user is signed in and this is the login page, auto-logout them
+          if (!isAutoLogoutInProgress) {
+            autoLogoutUser();
+          }
+          
         } else {
           console.log('[Auth] User is not signed in');
           // User is signed out, ensure buttons are enabled
           enableLoginButtons();
+          isAutoLogoutInProgress = false;
         }
       });
-    }
-
-    // Redirect to admin panel
-    function redirectToAdminPanel() {
-      const currentPath = window.location.pathname;
-      const basePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
-      console.log('[Auth] Redirecting to admin panel...');
-      window.location.href = basePath + '/panel/';
     }
 
     // Enable login buttons
@@ -402,9 +386,46 @@
       }
     }
 
-    // Google OAuth login - RESTRICTED to existing users only
+    // Create or update user document in Firestore
+    async function createUserDocument(user) {
+      try {
+        if (!db) {
+          console.error('[Firestore] Database not initialized');
+          return;
+        }
+
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (!userSnap.exists()) {
+          // Create new user document
+          await setDoc(userRef, {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName || '',
+            photoURL: user.photoURL || '',
+            provider: user.providerData[0]?.providerId || 'google.com',
+            createdAt: new Date().toISOString(),
+            lastLoginAt: new Date().toISOString(),
+            role: 'admin' // Default role for admin panel access
+          });
+          console.log('[Firestore] New user document created:', user.uid);
+        } else {
+          // Update last login time for existing user
+          await setDoc(userRef, {
+            lastLoginAt: new Date().toISOString()
+          }, { merge: true });
+          console.log('[Firestore] User document updated:', user.uid);
+        }
+      } catch (error) {
+        console.error('[Firestore] Error creating/updating user document:', error);
+        // Don't throw error here as auth was successful
+      }
+    }
+
+    // Google OAuth login
     async function handleGoogleLogin() {
-      if (!isInitialized || !auth) {
+      if (!isInitialized || !auth || !db) {
         showToast('Authentication system not ready. Please try again.', 'error');
         return;
       }
@@ -414,33 +435,28 @@
 
       try {
         const provider = new GoogleAuthProvider();
+        // Add scopes if needed
+        provider.addScope('email');
+        provider.addScope('profile');
         
         console.log('[Auth] Initiating Google sign-in...');
         const result = await signInWithPopup(auth, provider);
+        
+        // This gives you a Google Access Token
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        const token = credential.accessToken;
+        
+        // The signed-in user info
         const user = result.user;
+        console.log('[Auth] Google sign-in successful:', user.email);
         
-        console.log('[Auth] Google sign-in successful, checking user in Firestore:', user.email);
+        // Create/update user document in Firestore
+        await createUserDocument(user);
         
-        // CRITICAL: Check if user exists in Firestore before allowing access
-        const userExists = await checkUserExists(user.uid);
-        
-        if (!userExists) {
-          // User doesn't exist in Firestore - sign them out and show error
-          await signOut(auth);
-          console.log('[Auth] Access denied - user not registered:', user.email);
-          showToast('Access denied. Your account is not registered in the system. Please contact administrator.', 'error');
-          setButtonLoading(googleBtn, false);
-          return;
-        }
-        
-        // User exists - update their document and allow login
-        await updateUserDocument(user);
-        
-        // Redirect to admin panel for authorized users
-        showToast('Login successful! Redirecting...', 'success');
-        setTimeout(() => {
-          redirectToAdminPanel();
-        }, 1000);
+        // Redirect to admin panel after successful manual login
+        const currentPath = window.location.pathname;
+        const basePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+        window.location.href = basePath + '/panel/';
         
       } catch (error) {
         console.error('[Auth] Google sign-in error:', error);
@@ -463,9 +479,6 @@
           case 'auth/operation-not-allowed':
             errorMessage = 'Google sign-in is not enabled. Contact administrator.';
             break;
-          case 'auth/internal-error':
-            errorMessage = 'Authentication service error. Please check your Firebase configuration.';
-            break;
           default:
             errorMessage = `Sign-in failed: ${error.message}`;
         }
@@ -475,9 +488,9 @@
       }
     }
 
-    // Email/Password login - also checks if user exists in Firestore
+    // Email/Password login
     async function handleEmailLogin(email, password) {
-      if (!isInitialized || !auth) {
+      if (!isInitialized || !auth || !db) {
         showToast('Authentication system not ready. Please try again.', 'error');
         return;
       }
@@ -490,28 +503,15 @@
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         
-        console.log('[Auth] Email sign-in successful, checking user in Firestore:', user.email);
+        console.log('[Auth] Email sign-in successful:', user.email);
         
-        // Check if user exists in Firestore
-        const userExists = await checkUserExists(user.uid);
+        // Create/update user document in Firestore
+        await createUserDocument(user);
         
-        if (!userExists) {
-          // User doesn't exist in Firestore - sign them out and show error
-          await signOut(auth);
-          console.log('[Auth] Access denied - user not registered:', user.email);
-          showToast('Access denied. Your account is not registered in the system. Please contact administrator.', 'error');
-          setButtonLoading(submitBtn, false);
-          return;
-        }
-        
-        // User exists - update their document and allow login
-        await updateUserDocument(user);
-        
-        // Show success message and redirect
-        showToast('Login successful! Redirecting...', 'success');
-        setTimeout(() => {
-          redirectToAdminPanel();
-        }, 1000);
+        // Redirect to admin panel after successful manual login
+        const currentPath = window.location.pathname;
+        const basePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+        window.location.href = basePath + '/panel/';
         
       } catch (error) {
         console.error('[Auth] Email sign-in error:', error);
