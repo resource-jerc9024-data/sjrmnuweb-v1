@@ -61,7 +61,7 @@
     <div class="content">
       <div class="card">
         <div class="toolbar">
-          <input id="searchInput" class="searchbar" type="text" placeholder="Search by form number, name, email, or phone" />
+          <input id="searchInput" class="searchbar" type="text" placeholder="Search by form number, name, or phone" />
           <button id="refreshBtn" class="btn ghost">Refresh</button>
           <button id="exportXlsxBtn" class="btn ghost">Export Excel</button>
           <button id="exportPdfAllBtn" class="btn">Export All PDF</button>
@@ -75,8 +75,9 @@
               <tr>
                 <th class="nowrap">Form #</th>
                 <th>Name</th>
-                <th>Email</th>
                 <th>Phone</th>
+                <th>Class & Section</th>
+                <th>School</th>
                 <th>Category</th>
                 <th class="nowrap">Created</th>
                 <th class="nowrap">Actions</th>
@@ -215,15 +216,15 @@
       return allRecords.filter(r =>
         (r.id || '').toLowerCase().includes(q) ||
         (r.full_name || '').toLowerCase().includes(q) ||
-        (r.email || '').toLowerCase().includes(q) ||
-        (r.phone || '').toLowerCase().includes(q)
+        (r.phone || '').toLowerCase().includes(q) ||
+        (r.institute || '').toLowerCase().includes(q)
       );
     }
 
     // Load records from Firestore
     async function loadRecords() {
       try {
-        tbody.innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8">Loading...</td></tr>';
         console.log('[Admin] Fetching records...');
         const qy = query(collection(db, 'records'), orderBy('created_at', 'desc'));
         const snap = await getDocs(qy);
@@ -233,7 +234,7 @@
         showToast(`Loaded ${allRecords.length} records`, 'success');
       } catch (err) {
         console.error('[Admin] Failed to load records:', err);
-        tbody.innerHTML = '<tr><td colspan="7">Failed to load records</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8">Failed to load records</td></tr>';
         showToast('Failed to load records. Check console for details.', 'error');
       }
     }
@@ -242,17 +243,20 @@
     function renderRows(rows) {
       tbody.innerHTML = '';
       if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="7">No records found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8">No records found</td></tr>';
         return;
       }
       
       for (const r of rows) {
         const tr = document.createElement('tr');
+        const classSection = `${r.class || ''}${r.section ? ` - ${r.section}` : ''}`;
+        
         tr.innerHTML = `
           <td class="nowrap">${r.id}</td>
           <td>${escapeHtml(r.full_name)}</td>
-          <td>${escapeHtml(r.email)}</td>
           <td>${escapeHtml(r.phone)}</td>
+          <td>${escapeHtml(classSection)}</td>
+          <td>${escapeHtml(r.institute)}</td>
           <td>${escapeHtml(r.category)}</td>
           <td class="nowrap">${formatDate(r.created_at)}</td>
           <td class="nowrap">
@@ -298,6 +302,7 @@
           <div>
             <button class="btn" id="detailPdfBtn">Download PDF</button>
             <button class="btn ghost" id="viewMoreBtn">View More</button>
+            <button class="btn ghost" id="closeDetailsBtn">Close</button>
           </div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px;">
@@ -319,6 +324,9 @@
         </div>`;
       document.getElementById('detailPdfBtn').onclick = () => downloadRecordPdf(r);
       document.getElementById('viewMoreBtn').onclick = () => openDetailModal(r);
+      document.getElementById('closeDetailsBtn').onclick = () => {
+        details.classList.add('hidden');
+      };
     }
 
     function detailRow(label, value) {
@@ -367,70 +375,89 @@
 
     // PDF generation functions
     function downloadRecordPdf(r) {
-      const doc = new jsPDF();
-      let y = 14;
-      doc.setFontSize(16); 
-      doc.text(`SJR MUN Registration`, 14, y); 
-      y += 8;
-      doc.setFontSize(12); 
-      doc.text(`Form # ${r.id}`, 14, y); 
-      y += 8;
-      doc.setDrawColor(200); 
-      doc.line(14, y, 196, y); 
-      y += 6;
-      doc.setFontSize(11);
-      
-      for (const [k,v] of recordToLines(r)) {
-        const lines = doc.splitTextToSize(`${k}: ${v||''}`, 182);
-        doc.text(lines, 14, y); 
-        y += 6 + (lines.length-1)*5;
-        if (y > 280) { 
-          doc.addPage(); 
-          y = 14; 
-        }
+      if (!r) {
+        showToast('No record data available', 'error');
+        return;
       }
-      doc.save(`form_${r.id}.pdf`);
+      
+      try {
+        const doc = new jsPDF();
+        let y = 14;
+        doc.setFontSize(16); 
+        doc.text(`SJR MUN Registration`, 14, y); 
+        y += 8;
+        doc.setFontSize(12); 
+        doc.text(`Form # ${r.id}`, 14, y); 
+        y += 8;
+        doc.setDrawColor(200); 
+        doc.line(14, y, 196, y); 
+        y += 6;
+        doc.setFontSize(11);
+        
+        for (const [k,v] of recordToLines(r)) {
+          const lines = doc.splitTextToSize(`${k}: ${v||''}`, 182);
+          doc.text(lines, 14, y); 
+          y += 6 + (lines.length-1)*5;
+          if (y > 280) { 
+            doc.addPage(); 
+            y = 14; 
+          }
+        }
+        doc.save(`form_${r.id}.pdf`);
+        showToast(`PDF for ${r.id} downloaded`, 'success');
+      } catch (error) {
+        console.error('PDF generation error:', error);
+        showToast('Error generating PDF', 'error');
+      }
     }
 
     document.getElementById('exportPdfAllBtn').addEventListener('click', () => {
-      if (!allRecords.length) return showToast('No data to export', 'error');
+      if (!allRecords.length) {
+        showToast('No data to export', 'error');
+        return;
+      }
       
-      const doc = new jsPDF();
-      let y = 14;
-      doc.setFontSize(16); 
-      doc.text('All Registrations', 14, y); 
-      y += 8;
-      doc.setDrawColor(200); 
-      doc.line(14, y, 196, y); 
-      y += 6;
-      
-      for (const r of allRecords) {
-        doc.setFontSize(12); 
-        doc.text(`Form # ${r.id} - ${r.full_name||''}`, 14, y); 
+      try {
+        const doc = new jsPDF();
+        let y = 14;
+        doc.setFontSize(16); 
+        doc.text('All Registrations', 14, y); 
+        y += 8;
+        doc.setDrawColor(200); 
+        doc.line(14, y, 196, y); 
         y += 6;
-        doc.setFontSize(10);
-        const lines = recordToLines(r);
         
-        for (const [k,v] of lines) {
-          const wrapped = doc.splitTextToSize(`${k}: ${v||''}`, 182);
-          doc.text(wrapped, 14, y); 
-          y += 5 + (wrapped.length-1)*4;
+        for (const r of allRecords) {
+          doc.setFontSize(12); 
+          doc.text(`Form # ${r.id} - ${r.full_name||''}`, 14, y); 
+          y += 6;
+          doc.setFontSize(10);
+          const lines = recordToLines(r);
+          
+          for (const [k,v] of lines) {
+            const wrapped = doc.splitTextToSize(`${k}: ${v||''}`, 182);
+            doc.text(wrapped, 14, y); 
+            y += 5 + (wrapped.length-1)*4;
+            if (y > 270) { 
+              doc.addPage(); 
+              y = 14; 
+            }
+          }
+          y += 4; 
+          doc.setDrawColor(230); 
+          doc.line(14, y, 196, y); 
+          y += 6;
           if (y > 270) { 
             doc.addPage(); 
             y = 14; 
           }
         }
-        y += 4; 
-        doc.setDrawColor(230); 
-        doc.line(14, y, 196, y); 
-        y += 6;
-        if (y > 270) { 
-          doc.addPage(); 
-          y = 14; 
-        }
+        doc.save('all_registrations.pdf');
+        showToast('All records exported as PDF', 'success');
+      } catch (error) {
+        console.error('All PDF export error:', error);
+        showToast('Error exporting all records as PDF', 'error');
       }
-      doc.save('all_registrations.pdf');
-      showToast('All records exported as PDF', 'success');
     });
 
     // Excel export
@@ -469,6 +496,13 @@
         showToast('Error exporting Excel file', 'error');
       }
     });
+  </script>
+  
+  <!-- Include jsPDF library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+    // Make jsPDF available globally
+    window.jsPDF = window.jspdf.jsPDF;
   </script>
 </body>
 </html>

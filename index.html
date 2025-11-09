@@ -20,18 +20,21 @@
     .error-message { color: #ef4444; font-size: 12px; margin-top: 4px; display: none; }
     .field.error .error-message { display: block; }
     .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
+
+    /* Full-bleed banner */
+    .banner-wrap{position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:-50vw;width:100vw}
+    .banner-wrap img{width:100%;height:auto;display:block}
   </style>
 </head>
 <body>
   <main class="page">
-    <!-- Scroll Sequence Section -->
+    <!-- Full-bleed Banner -->
     <section class="scroll-section" id="hero" data-aos="fade-up" data-aos-delay="60">
-      <div class="progress-bar" aria-hidden="true"></div>
-      <div class="image-counter"><span id="currentImage">1</span>/<span id="totalImages">2</span></div>
-      <div id="imageContainer" aria-live="polite" aria-label="Scroll image sequence"></div>
-      <div class="scroll-indicator" role="button" tabindex="0" aria-label="Skip slides and go to the registration form">
-        <div class="scroll-text">Scroll</div>
-        <div class="scroll-arrow" aria-hidden="true"></div>
+      <div class="banner-wrap" aria-label="Hero banner">
+        <picture>
+          <source media="(max-width: 640px)" srcset="images/banner.gif" />
+          <img src="images/banner.png" alt="SJR MUN Banner" />
+        </picture>
       </div>
     </section>
 
