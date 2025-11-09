@@ -53,9 +53,9 @@
 <body>
   <div class="auth-shell">
     <div class="auth-card">
-      <!-- Logout Message -->
+      <!-- Logout Message - Only show if user was manually logged out -->
       <div id="logoutMessage" class="logout-message">
-        You have been automatically logged out. Please sign in again to continue.
+        You have been logged out. Please sign in again to continue.
       </div>
       
       <div class="brand">
@@ -133,9 +133,6 @@
   </script>
   
   <script>
-    // Session flag to track auto-logout
-    window.autoLoggedOut = false;
-    
     // Firebase configuration loader from /api/env
     window.loadFirebaseConfig = async function loadFirebaseConfig() {
       try {
@@ -230,7 +227,6 @@
     let auth = null;
     let app = null;
     let db = null;
-    let isAutoLogoutInProgress = false;
     let isInitialized = false;
 
     // Initialize Firebase Auth and Firestore Lite
@@ -310,60 +306,29 @@
       }
     }
 
-    // Auto-logout user when they open login page
-    async function autoLogoutUser() {
-      if (isAutoLogoutInProgress || !auth) return;
-      
-      isAutoLogoutInProgress = true;
-      const user = auth.currentUser;
-      
-      if (user) {
-        console.log('[Auth] Auto-logging out user who opened login page:', user.email);
-        
-        try {
-          await signOut(auth);
-          window.autoLoggedOut = true;
-          
-          // Show logout message
-          const logoutMessage = document.getElementById('logoutMessage');
-          if (logoutMessage) {
-            logoutMessage.style.display = 'block';
-          }
-          
-          console.log('[Auth] Auto-logout completed successfully');
-          showToast('You have been logged out. Please sign in again.', 'success');
-          
-        } catch (error) {
-          console.error('[Auth] Auto-logout failed:', error);
-          showToast('Auto-logout failed. Please try manual logout.', 'error');
-        } finally {
-          isAutoLogoutInProgress = false;
-        }
-      } else {
-        isAutoLogoutInProgress = false;
-      }
-    }
-
-    // Setup authentication state listener
+    // Setup authentication state listener - REMOVED AUTO-LOGOUT
     function setupAuthListeners() {
       if (!auth) return;
       
       onAuthStateChanged(auth, (user) => {
         if (user) {
           console.log('[Auth] User is signed in:', user.email);
-          
-          // If user is signed in and this is the login page, auto-logout them
-          if (!isAutoLogoutInProgress) {
-            autoLogoutUser();
-          }
-          
+          // User is already signed in - redirect them to admin panel immediately
+          redirectToAdminPanel();
         } else {
           console.log('[Auth] User is not signed in');
           // User is signed out, ensure buttons are enabled
           enableLoginButtons();
-          isAutoLogoutInProgress = false;
         }
       });
+    }
+
+    // Redirect to admin panel
+    function redirectToAdminPanel() {
+      const currentPath = window.location.pathname;
+      const basePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+      console.log('[Auth] Redirecting to admin panel...');
+      window.location.href = basePath + '/panel/';
     }
 
     // Enable login buttons
@@ -472,9 +437,10 @@
         await updateUserDocument(user);
         
         // Redirect to admin panel for authorized users
-        const currentPath = window.location.pathname;
-        const basePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
-        window.location.href = basePath + '/panel/';
+        showToast('Login successful! Redirecting...', 'success');
+        setTimeout(() => {
+          redirectToAdminPanel();
+        }, 1000);
         
       } catch (error) {
         console.error('[Auth] Google sign-in error:', error);
@@ -541,10 +507,11 @@
         // User exists - update their document and allow login
         await updateUserDocument(user);
         
-        // Redirect to admin panel after successful manual login
-        const currentPath = window.location.pathname;
-        const basePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
-        window.location.href = basePath + '/panel/';
+        // Show success message and redirect
+        showToast('Login successful! Redirecting...', 'success');
+        setTimeout(() => {
+          redirectToAdminPanel();
+        }, 1000);
         
       } catch (error) {
         console.error('[Auth] Email sign-in error:', error);
