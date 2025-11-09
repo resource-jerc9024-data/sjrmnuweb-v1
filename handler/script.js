@@ -39,7 +39,7 @@
   const container = document.getElementById('imageContainer');
   if(!hero || !container) return;
 
-  const images = ['images/3.jpg','images/1.jpg','images/2.jpg'];
+  const images = ['images/1.jpg','images/2.jpg'];
   const counterEl = document.querySelector('.image-counter');
   const currentEl = document.getElementById('currentImage');
   const totalEl = document.getElementById('totalImages');
@@ -60,79 +60,15 @@
     return slide;
   }
 
-  function initLayout(){
+  // Static rendering: create a single slide with both images
+  function renderStatic(){
     container.innerHTML='';
-    const isDesktop = window.innerWidth >= 1024;
-    const slides = [];
-    if(isDesktop){
-      images.forEach(u=>slides.push(createSlide([u])));
-    } else {
-      // Mobile: first alone, then grouped 2+3
-      slides.push(createSlide([images[0]]));
-      slides.push(createSlide([images[1], images[2]]));
-    }
-    (slides[0] && slides[0].classList.add('active'));
-    return slides;
+    const slide = createSlide(images);
+    slide.classList.add('active');
+    if(currentEl) currentEl.textContent = '1';
   }
 
-  let slides = [];
-  let rafId;
-  function setupScroll(){
-    const imageDisplayRatio = 1;
-    const transitionRatio = 0;
-    let lastIndex = -1;
-
-    function loop(){
-      const scrollY = window.scrollY;
-      const heroTop = hero.offsetTop;
-      const heroHeight = hero.offsetHeight - window.innerHeight;
-      const contentTop = contentSection ? contentSection.offsetTop : Number.MAX_SAFE_INTEGER;
-      const totalScrollHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const progress = Math.min(Math.max((scrollY - heroTop) / heroHeight, 0), 0.999);
-
-      // progress bar (visible only during hero scroll)
-      if(progressBar){
-        const scrollProgress = (window.scrollY / totalScrollHeight) * 100;
-        progressBar.style.width = scrollProgress + '%';
-        const inHero = scrollY >= heroTop && scrollY < contentTop;
-        progressBar.style.opacity = inHero ? '1' : '0';
-      }
-
-      // counter visibility
-      if(counterEl){
-        if(scrollY < contentTop - 100) counterEl.classList.remove('hidden');
-        else counterEl.classList.add('hidden');
-      }
-
-      // index calc (snap instantly to each slide)
-      const n = slides.length;
-      let index = Math.min(Math.floor(progress * n), n - 1);
-
-      if(index !== lastIndex){
-        slides.forEach((s,i)=>s.classList.toggle('active', i===index));
-        if(currentEl) currentEl.textContent = (index+1);
-        lastIndex = index;
-      }
-
-      rafId = requestAnimationFrame(loop);
-    }
-    rafId = requestAnimationFrame(loop);
-  }
-
-  function reinit(){
-    if(rafId) cancelAnimationFrame(rafId);
-    slides = initLayout();
-    setupScroll();
-  }
-
-  preload(images).then(()=>{
-    slides = initLayout();
-    setupScroll();
-  });
-
-  let t;
-  window.addEventListener('resize', ()=>{clearTimeout(t); t=setTimeout(reinit, 250)});
-  window.addEventListener('orientationchange', ()=>{setTimeout(reinit, 300)});
+  preload(images).then(renderStatic);
 })();
 
 // Make scroll indicator act as skip-to-form button

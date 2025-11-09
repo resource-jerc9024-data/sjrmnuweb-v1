@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Admin Panel SJR MUN</title>
+  <title>Admin Panel SJR MNU</title>
   <link rel="stylesheet" href="../../handler/styles.css" />
   <link rel="icon" type="image/x-icon" href="../../favicon.ico" />
   <style>
     body { min-height:100vh; background: radial-gradient(1200px 600px at 20% -10%, #7c3aed22, transparent), radial-gradient(1000px 500px at 120% 10%, #06b6d422, transparent), linear-gradient(180deg, #0b1020, #0f172a); color:#e5e7eb; }
     .admin-shell { min-height:100vh; display:flex; flex-direction:column; }
+    /* Hide app until auth state is known to prevent flash */
     body.auth-pending .admin-shell { display:none; }
     .topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 20px; backdrop-filter: blur(8px); background:rgba(15,23,42,.45); border-bottom:1px solid #1f2937; position:sticky; top:0; z-index:10; }
     .brand { display:flex; align-items:center; gap:10px; }
@@ -37,7 +38,6 @@
     .modal-body { padding:14px 16px; max-height:70vh; overflow:auto; }
     .kv { display:grid; grid-template-columns: 180px 1fr; gap:10px; }
     .kv .k { color:#94a3b8; }
-    .hidden { display: none; }
   </style>
 </head>
 <body class="auth-pending">
@@ -85,7 +85,7 @@
     </div>
   </div>
 
-  <!-- Toast notification system -->
+  
   <script>
     (function(){
       function ensureToast(){
@@ -113,7 +113,8 @@
     })();
   </script>
   
-  <!-- Detail Modal -->
+  
+
   <div id="detailModal" class="modal-overlay">
     <div class="modal">
       <div class="modal-head">
@@ -126,75 +127,66 @@
     </div>
   </div>
 
-  <!-- Firebase Configuration -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-analytics.js";
-    const firebaseConfig = {
-      apiKey: "AIzaSyDQ_ox-jKUM6ALhWrIymVrGRrDnBAb7bHE",
-      authDomain: "sjrmnuweb-3cac4.firebaseapp.com",
-      projectId: "sjrmnuweb-3cac4",
-      storageBucket: "sjrmnuweb-3cac4.firebasestorage.app",
-      messagingSenderId: "402828314003",
-      appId: "1:402828314003:web:eb48510e51d5f439b19466",
-      measurementId: "G-6D259WD4H6"
-    };
-    const app = initializeApp(firebaseConfig);
-    try { getAnalytics(app); } catch(e) { /* analytics optional in some envs */ }
-    window.firebaseApp = app;
-  </script>
   
-  <!-- Authentication Check -->
   <script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyDQ_ox-jKUM6ALhWrIymVrGRrDnBAb7bHE",
+    authDomain: "sjrmnuweb-3cac4.firebaseapp.com",
+    projectId: "sjrmnuweb-3cac4",
+    storageBucket: "sjrmnuweb-3cac4.firebasestorage.app",
+    messagingSenderId: "402828314003",
+    appId: "1:402828314003:web:eb48510e51d5f439b19466",
+    measurementId: "G-6D259WD4H6"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+  </script>
+  <script type="module">
+    import { getApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
     import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-    const authCheck = getAuth(window.firebaseApp);
-    onAuthStateChanged(authCheck, (user) => {
-      if (!user) { 
-        window.location.replace('../'); 
-        return; 
-      }
+    const gateAuth = getAuth(getApp());
+    onAuthStateChanged(gateAuth, (user) => {
+      if (!user) { window.location.replace('../'); return; }
       document.body.classList.remove('auth-pending');
       window.dispatchEvent(new Event('auth-ok'));
     });
   </script>
-  
-  <!-- Main Admin Panel Logic -->
   <script type="module">
+    import { getApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
     import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-    import { getFirestore, collection, getDocs, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore-lite.js";
     import { jsPDF } from "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.es.min.js";
     import * as XLSX from "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
-    const auth = getAuth(window.firebaseApp);
-    const db = getFirestore(window.firebaseApp);
+    const fbApp = getApp();
+    const auth = getAuth(fbApp);
+    const db = getFirestore(fbApp);
 
     const tbody = document.getElementById('recordsTbody');
     const details = document.getElementById('detailsPanel');
     const searchInput = document.getElementById('searchInput');
 
     let allRecords = [];
-    let unsubscribe = null;
 
     if (auth.currentUser) {
       document.body.classList.remove('auth-pending');
       loadRecords();
-      setupRealtimeListener();
     } else {
       window.addEventListener('auth-ok', () => {
         loadRecords();
-        setupRealtimeListener();
       }, { once: true });
     }
 
-    function setupRealtimeListener() {
-      if (unsubscribe) unsubscribe();
-      const q = query(collection(db, 'records'), orderBy('created_at', 'desc'));
-      unsubscribe = onSnapshot(q, () => {
-        console.log('[Admin] Realtime update received');
-      }, (error) => console.error('[Admin] Realtime listener error:', error));
-    }
-
     document.getElementById('logoutBtn').addEventListener('click', async () => {
-      if (unsubscribe) unsubscribe();
       await signOut(auth);
       window.location.href = '../';
     });
@@ -207,7 +199,7 @@
       q = (q || '').toLowerCase().trim();
       if (!q) return allRecords;
       return allRecords.filter(r =>
-        (r.id || '').toLowerCase().includes(q) ||
+        (r.form_number || '').toLowerCase().includes(q) ||
         (r.full_name || '').toLowerCase().includes(q) ||
         (r.email || '').toLowerCase().includes(q) ||
         (r.phone || '').toLowerCase().includes(q)
@@ -217,11 +209,12 @@
     async function loadRecords() {
       try {
         tbody.innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
+        console.log('[Admin] Fetching records...');
         const qy = query(collection(db, 'records'), orderBy('created_at', 'desc'));
         const snap = await getDocs(qy);
         allRecords = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        console.log(`[Admin] Loaded ${allRecords.length} records`);
         renderRows(allRecords);
-        showToast(`Loaded ${allRecords.length} records`, 'success');
       } catch (err) {
         console.error('[Admin] Failed to load records:', err);
         tbody.innerHTML = '<tr><td colspan="7">Failed to load records</td></tr>';
@@ -232,7 +225,7 @@
     function renderRows(rows) {
       tbody.innerHTML = '';
       if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="7">No records found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7">No records</td></tr>';
         return;
       }
       for (const r of rows) {
@@ -264,8 +257,16 @@
       }));
     }
 
-    function escapeHtml(s='') { return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-    function formatDate(ts) { try { if (ts && ts.toDate) return ts.toDate().toLocaleString(); } catch {} return ts || ''; }
+    function escapeHtml(s='') {
+      return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    }
+
+    function formatDate(ts) {
+      try {
+        if (ts && ts.toDate) return ts.toDate().toLocaleString();
+      } catch {}
+      return '';
+    }
 
     function showDetails(r) {
       if (!r) return;
@@ -299,7 +300,10 @@
       document.getElementById('viewMoreBtn').onclick = () => openDetailModal(r);
     }
 
-    function detailRow(label, value) { return `<div><div class="muted">${escapeHtml(label)}</div><div>${escapeHtml(value||'')}</div></div>`; }
+    function detailRow(label, value) {
+      return `<div><div class="muted">${escapeHtml(label)}</div><div>${escapeHtml(value||'')}</div></div>`;
+    }
+
     function recordToLines(r) {
       return [
         ['Form #', r.id],
@@ -331,8 +335,13 @@
       overlay.style.display = 'flex';
     }
 
-    document.getElementById('closeModalBtn').addEventListener('click', () => { document.getElementById('detailModal').style.display = 'none'; });
-    document.getElementById('detailModal').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.style.display = 'none'; });
+    document.getElementById('closeModalBtn').addEventListener('click', () => {
+      document.getElementById('detailModal').style.display = 'none';
+    });
+
+    document.getElementById('detailModal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
+    });
 
     function downloadRecordPdf(r) {
       const doc = new jsPDF();
@@ -350,7 +359,7 @@
     }
 
     document.getElementById('exportPdfAllBtn').addEventListener('click', () => {
-      if (!allRecords.length) return showToast('No data to export', 'error');
+      if (!allRecords.length) return showToast('No data', 'error');
       const doc = new jsPDF();
       let y = 14;
       doc.setFontSize(16); doc.text('All Registrations', 14, y); y += 8;
@@ -358,7 +367,8 @@
       for (const r of allRecords) {
         doc.setFontSize(12); doc.text(`Form # ${r.id} - ${r.full_name||''}`, 14, y); y += 6;
         doc.setFontSize(10);
-        for (const [k,v] of recordToLines(r)) {
+        const lines = recordToLines(r);
+        for (const [k,v] of lines) {
           const wrapped = doc.splitTextToSize(`${k}: ${v||''}`, 182);
           doc.text(wrapped, 14, y); y += 5 + (wrapped.length-1)*4;
           if (y > 270) { doc.addPage(); y = 14; }
@@ -367,11 +377,12 @@
         if (y > 270) { doc.addPage(); y = 14; }
       }
       doc.save('all_registrations.pdf');
-      showToast('All records exported as PDF', 'success');
     });
 
+    // CSV export removed per requirements
+
     document.getElementById('exportXlsxBtn').addEventListener('click', () => {
-      if (!allRecords.length) return showToast('No data to export', 'error');
+      if (!allRecords.length) return showToast('No data', 'error');
       const data = allRecords.map(r => ({
         form_number: r.id,
         full_name: r.full_name,
@@ -394,7 +405,6 @@
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Registrations');
       XLSX.writeFile(wb, 'registrations.xlsx');
-      showToast('Records exported as Excel', 'success');
     });
   </script>
 </body>
