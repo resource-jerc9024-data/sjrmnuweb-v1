@@ -8,7 +8,7 @@
   <link rel="icon" type="image/x-icon" href="../favicon.ico" />
   <style>
     body { min-height:100vh; background: radial-gradient(1200px 600px at 20% -10%, #7c3aed22, transparent), radial-gradient(1000px 500px at 120% 10%, #06b6d422, transparent), linear-gradient(180deg, #0b1020, #0f172a); color:#e5e7eb; }
-    .auth-shell { display:grid; place-items:center; min-height:auto; padding:24px; }
+    .auth-shell { display:grid; place-items:center; min-height:100vh; padding:24px; }
     .auth-card { width:100%; max-width:440px; background:rgba(17, 24, 39, 0.7); backdrop-filter: blur(8px); border:1px solid #1f2937; border-radius:16px; box-shadow: 0 20px 60px rgba(0,0,0,.45); padding:28px; }
     .brand { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
     .brand .logo { width:64px; height:64px; border-radius:12px; object-fit:cover; background:#fff; box-shadow: 0 10px 28px rgba(158,240,26,.20); }
@@ -25,6 +25,12 @@
     .divider { display:flex; align-items:center; gap:12px; color:#94a3b8; font-size:12px; margin:16px 0; }
     .divider::before, .divider::after { content:""; height:1px; background:#1f2937; flex:1; }
     .footnote { color:#94a3b8; text-align:center; font-size:12px; margin-top:6px; }
+    
+    /* Toast styles */
+    .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:#0b1220;border:1px solid #1f2937;color:#e5e7eb;border-radius:12px;padding:12px 14px;box-shadow:0 20px 50px rgba(0,0,0,.5);display:flex;align-items:center;gap:12px;min-width:260px;z-index:1000;transition:.25s opacity,.25s transform}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+    .toast.success{border-color:rgba(158,240,26,.5)}
+    .toast.error{border-color:#7f1d1d}
   </style>
 </head>
 <body>
@@ -39,7 +45,7 @@
         <div class="grid">
           <label class="field">
             <span>Email</span>
-            <input type="email" name="email" placeholder="you@example.com" required />
+            <input type="email" id="emailInput" name="email" placeholder="you@example.com" required />
           </label>
           <label class="field">
             <span>Password</span>
@@ -97,6 +103,7 @@
       if (fc) fc.style.transform = 'translateY(-2px)';
     })();
   </script>
+  
   <script>
     window.loadFirebaseConfig = async function loadFirebaseConfig(){
       try {
@@ -119,6 +126,7 @@
       }
     }
   </script>
+  
   <script>
     (function(){
       function ensureToast(){
@@ -145,22 +153,15 @@
       }
     })();
   </script>
-  <script>
-    window.env = {
-      FIREBASE_API_KEY: window.FIREBASE_API_KEY || "",
-      FIREBASE_AUTH_DOMAIN: window.FIREBASE_AUTH_DOMAIN || "",
-      FIREBASE_PROJECT_ID: window.FIREBASE_PROJECT_ID || "",
-      FIREBASE_STORAGE_BUCKET: window.FIREBASE_STORAGE_BUCKET || "",
-      FIREBASE_MESSAGING_SENDER_ID: window.FIREBASE_MESSAGING_SENDER_ID || "",
-      FIREBASE_APP_ID: window.FIREBASE_APP_ID || ""
-    };
-  </script>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, sendPasswordResetEmail, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
 
+    // Load Firebase configuration
     const ok = await window.loadFirebaseConfig();
     if (!ok) throw new Error('Firebase configuration failed to load');
+    
     const cfg = {
       apiKey: window.FIREBASE_API_KEY,
       authDomain: window.FIREBASE_AUTH_DOMAIN,
@@ -169,53 +170,137 @@
       messagingSenderId: window.FIREBASE_MESSAGING_SENDER_ID,
       appId: window.FIREBASE_APP_ID,
     };
+    
     const app = initializeApp(cfg);
     const auth = getAuth(app);
 
+    // Check if user is already logged in and redirect properly
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        window.location.href = 'panel';
+        // Get current path and redirect to panel correctly
+        const currentPath = window.location.pathname;
+        const basePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+        window.location.href = basePath + '/panel/';
       }
     });
 
+    // Email/Password login
     const form = document.getElementById('emailLoginForm');
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(form);
       const email = fd.get('email');
       const password = fd.get('password');
+      
       try {
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Signing in...';
+        submitBtn.disabled = true;
+        
         await signInWithEmailAndPassword(auth, email, password);
-        window.location.href = 'panel';
+        // Redirect happens automatically via onAuthStateChanged
       } catch (err) {
-        showToast('Login failed. Please check your credentials.', 'error');
-        console.error(err);
+        console.error('Login error:', err);
+        let errorMessage = 'Login failed. Please check your credentials.';
+        
+        if (err.code === 'auth/invalid-email') {
+          errorMessage = 'Invalid email address.';
+        } else if (err.code === 'auth/user-disabled') {
+          errorMessage = 'This account has been disabled.';
+        } else if (err.code === 'auth/user-not-found') {
+          errorMessage = 'No account found with this email.';
+        } else if (err.code === 'auth/wrong-password') {
+          errorMessage = 'Incorrect password.';
+        }
+        
+        showToast(errorMessage, 'error');
+        
+        // Re-enable button
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.textContent = 'Login';
+        submitBtn.disabled = false;
       }
     });
 
+    // Password reset
     document.getElementById('resetPasswordBtn').addEventListener('click', async () => {
-      const email = (new FormData(form)).get('email');
+      const emailInput = document.getElementById('emailInput');
+      const email = emailInput.value.trim();
+      
       if (!email) {
-        showToast('Enter your email first.', 'error');
+        showToast('Please enter your email address first.', 'error');
+        emailInput.focus();
         return;
       }
+      
+      // Basic email validation
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showToast('Please enter a valid email address.', 'error');
+        emailInput.focus();
+        return;
+      }
+      
       try {
+        const resetBtn = document.getElementById('resetPasswordBtn');
+        const originalText = resetBtn.textContent;
+        resetBtn.textContent = 'Sending...';
+        resetBtn.disabled = true;
+        
         await sendPasswordResetEmail(auth, email);
-        showToast('Password reset email sent.', 'success');
+        showToast('Password reset email sent. Check your inbox.', 'success');
+        
+        resetBtn.textContent = originalText;
+        resetBtn.disabled = false;
       } catch (err) {
-        showToast('Failed to send reset email.', 'error');
-        console.error(err);
+        console.error('Password reset error:', err);
+        let errorMessage = 'Failed to send reset email.';
+        
+        if (err.code === 'auth/user-not-found') {
+          errorMessage = 'No account found with this email.';
+        } else if (err.code === 'auth/invalid-email') {
+          errorMessage = 'Invalid email address.';
+        } else if (err.code === 'auth/too-many-requests') {
+          errorMessage = 'Too many attempts. Please try again later.';
+        }
+        
+        showToast(errorMessage, 'error');
+        
+        const resetBtn = document.getElementById('resetPasswordBtn');
+        resetBtn.textContent = 'Forgot Password';
+        resetBtn.disabled = false;
       }
     });
 
+    // Google login
     document.getElementById('googleLoginBtn').addEventListener('click', async () => {
       const provider = new GoogleAuthProvider();
+      
       try {
+        const googleBtn = document.getElementById('googleLoginBtn');
+        const originalText = googleBtn.innerHTML;
+        googleBtn.innerHTML = '<span>Signing in...</span>';
+        googleBtn.disabled = true;
+        
         await signInWithPopup(auth, provider);
-        window.location.href = 'panel';
+        // Redirect happens automatically via onAuthStateChanged
       } catch (err) {
-        showToast('Google login failed.', 'error');
-        console.error(err);
+        console.error('Google login error:', err);
+        let errorMessage = 'Google login failed.';
+        
+        if (err.code === 'auth/popup-closed-by-user') {
+          errorMessage = 'Login cancelled.';
+        } else if (err.code === 'auth/popup-blocked') {
+          errorMessage = 'Popup blocked. Please allow popups for this site.';
+        } else if (err.code === 'auth/network-request-failed') {
+          errorMessage = 'Network error. Please check your connection.';
+        }
+        
+        showToast(errorMessage, 'error');
+        
+        const googleBtn = document.getElementById('googleLoginBtn');
+        googleBtn.innerHTML = originalText;
+        googleBtn.disabled = false;
       }
     });
   </script>
