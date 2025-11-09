@@ -130,16 +130,23 @@
 
   <!-- Firebase Configuration -->
   <script type="module">
-    // Import Firebase modules
+    // Import Firebase modules - Using FULL Firestore for real-time updates
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
     import { 
       getAuth, 
       onAuthStateChanged, 
       signOut
     } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-    import { getFirestore, collection, getDocs, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+    import { 
+      getFirestore, 
+      collection, 
+      getDocs, 
+      query, 
+      orderBy, 
+      onSnapshot 
+    } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
     
-    // Firebase configuration
+    // Firebase configuration - Using direct config (same as in login)
     const firebaseConfig = {
       apiKey: "AIzaSyDQ_ox-jKUM6ALhWrIymVrGRrDnBAb7bHE",
       authDomain: "sjrmnuweb-3cac4.firebaseapp.com",
@@ -192,7 +199,7 @@
     let unsubscribe = null;
     let authChecked = false;
 
-    // SIMPLIFIED AUTH HANDLING - This is the key fix
+    // SIMPLIFIED AUTH HANDLING
     function initApp() {
       console.log('[Auth] Initializing authentication...');
       
@@ -203,7 +210,7 @@
         }
       }, 2000);
 
-      // Listen for auth state changes - SIMPLIFIED VERSION
+      // Listen for auth state changes
       onAuthStateChanged(auth, (user) => {
         clearTimeout(authTimeout);
         authChecked = true;
@@ -276,7 +283,7 @@
       }, 1000);
     }
 
-    // Setup real-time listener for new records
+    // Setup real-time listener for new records using FULL Firestore
     function setupRealtimeListener() {
       if (unsubscribe) {
         unsubscribe(); // Clean up any existing listener
@@ -335,7 +342,7 @@
       );
     }
 
-    // Load records from Firestore
+    // Load records from Firestore using FULL Firestore
     async function loadRecords() {
       try {
         // Show loading state

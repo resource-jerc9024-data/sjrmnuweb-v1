@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Admin Login SJR MUN</title>
-  <!-- REMOVED CSP - Matching index.html -->
+  <title>Admin Login SJR MNU </title>
   <link rel="stylesheet" href="../handler/styles.css" />
   <link rel="icon" type="image/x-icon" href="../favicon.ico" />
   <style>
@@ -21,6 +20,11 @@
     .actions { gap:10px; }
     .btn.primary { background:linear-gradient(135deg, var(--primary, #9ef01a), var(--primary-strong, #b9ff2b)); border:none; box-shadow:0 10px 24px rgba(158,240,26,.18); color:#0b1220; font-weight:600; }
     .btn.ghost { border-color:#334155; color:#cbd5e1; }
+    .btn.google { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; background:#111827; border:1px solid #1f2937; color:#e5e7eb; }
+    .btn.google:hover { border-color:#334155; }
+    .divider { display:flex; align-items:center; gap:12px; color:#94a3b8; font-size:12px; margin:16px 0; }
+    .divider::before, .divider::after { content:""; height:1px; background:#1f2937; flex:1; }
+    .footnote { color:#94a3b8; text-align:center; font-size:12px; margin-top:6px; }
     
     /* Toast styles */
     .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:#0b1220;border:1px solid #1f2937;color:#e5e7eb;border-radius:12px;padding:12px 14px;box-shadow:0 20px 50px rgba(0,0,0,.5);display:flex;align-items:center;gap:12px;min-width:260px;z-index:1000;transition:.25s opacity,.25s transform}
@@ -48,9 +52,9 @@
 <body>
   <div class="auth-shell">
     <div class="auth-card">
-      <!-- Logout Message - Only show if user was manually logged out -->
+      <!-- Logout Message -->
       <div id="logoutMessage" class="logout-message">
-        You have been logged out. Please sign in again to continue.
+        You have been automatically logged out. Please sign in again to continue.
       </div>
       
       <div class="brand">
@@ -76,6 +80,21 @@
           <button type="button" id="resetPasswordBtn" class="btn ghost">Forgot Password</button>
         </div>
       </form>
+
+      <div class="divider">Or sign in with Google</div>
+
+      <!-- Google Sign-in Button (Secondary) -->
+      <div class="actions" style="justify-content:center; margin-top:16px;">
+        <button id="googleLoginBtn" class="btn google">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
+            <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12 s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24 s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+            <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657 C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.335,6.306,14.691z"/>
+            <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36 c-5.202,0-9.619-3.317-11.277-7.946l-6.536,5.036C9.49,39.556,16.227,44,24,44z"/>
+            <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-3.977,5.571 c0.001-0.001,0.001-0.001,0.002-0.002l6.19,5.238C36.955,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
+          </svg>
+          Sign in with Google
+        </button>
+      </div>
 
   <footer class="footer elevated" style="--footer-margin-top:120px; --footer-margin-bottom:80px; --footer-padding-bottom:22px;">
     <small>Designed for SJR MUN CLUB</small>
@@ -113,6 +132,9 @@
   </script>
   
   <script>
+    // Session flag to track auto-logout
+    window.autoLoggedOut = false;
+    
     // Firebase configuration loader from /api/env
     window.loadFirebaseConfig = async function loadFirebaseConfig() {
       try {
@@ -190,7 +212,9 @@
       getAuth, 
       onAuthStateChanged, 
       signInWithEmailAndPassword, 
-      sendPasswordResetEmail,
+      sendPasswordResetEmail, 
+      GoogleAuthProvider, 
+      signInWithPopup,
       setPersistence,
       browserSessionPersistence,
       signOut
@@ -200,14 +224,15 @@
       doc,
       getDoc,
       setDoc
-    } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore-lite.js";
+    } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 
     let auth = null;
     let app = null;
     let db = null;
+    let isAutoLogoutInProgress = false;
     let isInitialized = false;
 
-    // Initialize Firebase Auth and Firestore Lite
+    // Initialize Firebase Auth and Firestore
     async function initializeFirebaseAuth() {
       try {
         // Load Firebase configuration from API
@@ -221,7 +246,7 @@
         // Set session persistence
         await setPersistence(auth, browserSessionPersistence);
         
-        console.log('[Auth] Firebase Auth and Firestore Lite initialized successfully');
+        console.log('[Auth] Firebase Auth and Firestore initialized successfully');
         isInitialized = true;
         setupAuthListeners();
         enableLoginButtons();
@@ -234,53 +259,37 @@
       }
     }
 
-    // Check if user exists in Firestore
-    async function checkUserExists(userId) {
-      try {
-        if (!db) {
-          console.error('[Firestore] Database not initialized');
-          return false;
-        }
-
-        const userRef = doc(db, 'users', userId);
-        const userSnap = await getDoc(userRef);
+    // Auto-logout user when they open login page
+    async function autoLogoutUser() {
+      if (isAutoLogoutInProgress || !auth) return;
+      
+      isAutoLogoutInProgress = true;
+      const user = auth.currentUser;
+      
+      if (user) {
+        console.log('[Auth] Auto-logging out user who opened login page:', user.email);
         
-        return userSnap.exists();
-      } catch (error) {
-        console.error('[Auth] Error checking user existence:', error);
-        return false;
-      }
-    }
-
-    // Create or update user document in Firestore (ONLY for existing users)
-    async function updateUserDocument(user) {
-      try {
-        if (!db) {
-          console.error('[Firestore] Database not initialized');
-          return;
+        try {
+          await signOut(auth);
+          window.autoLoggedOut = true;
+          
+          // Show logout message
+          const logoutMessage = document.getElementById('logoutMessage');
+          if (logoutMessage) {
+            logoutMessage.style.display = 'block';
+          }
+          
+          console.log('[Auth] Auto-logout completed successfully');
+          showToast('You have been logged out. Please sign in again.', 'success');
+          
+        } catch (error) {
+          console.error('[Auth] Auto-logout failed:', error);
+          showToast('Auto-logout failed. Please try manual logout.', 'error');
+        } finally {
+          isAutoLogoutInProgress = false;
         }
-
-        const userRef = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
-        
-        if (userSnap.exists()) {
-          // Update last login time for existing user
-          await setDoc(userRef, {
-            lastLoginAt: new Date().toISOString(),
-            email: user.email,
-            displayName: user.displayName || '',
-            photoURL: user.photoURL || ''
-          }, { merge: true });
-          console.log('[Firestore] User document updated:', user.uid);
-          return true;
-        } else {
-          // User doesn't exist in Firestore - don't create new document
-          console.log('[Auth] User not found in Firestore, access denied:', user.email);
-          return false;
-        }
-      } catch (error) {
-        console.error('[Firestore] Error updating user document:', error);
-        return false;
+      } else {
+        isAutoLogoutInProgress = false;
       }
     }
 
@@ -291,29 +300,32 @@
       onAuthStateChanged(auth, (user) => {
         if (user) {
           console.log('[Auth] User is signed in:', user.email);
-          // User is already signed in - redirect them to admin panel immediately
-          redirectToAdminPanel();
+          
+          // If user is signed in and this is the login page, auto-logout them
+          if (!isAutoLogoutInProgress) {
+            autoLogoutUser();
+          }
+          
         } else {
           console.log('[Auth] User is not signed in');
           // User is signed out, ensure buttons are enabled
           enableLoginButtons();
+          isAutoLogoutInProgress = false;
         }
       });
     }
 
-    // Redirect to admin panel
-    function redirectToAdminPanel() {
-      const currentPath = window.location.pathname;
-      const basePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
-      console.log('[Auth] Redirecting to admin panel...');
-      window.location.href = basePath + 'panel/';
-    }
-
     // Enable login buttons
     function enableLoginButtons() {
+      const googleBtn = document.getElementById('googleLoginBtn');
       const emailBtn = document.querySelector('#emailLoginForm button[type="submit"]');
       const resetBtn = document.getElementById('resetPasswordBtn');
       
+      if (googleBtn) {
+        googleBtn.disabled = false;
+        googleBtn.style.opacity = '1';
+        googleBtn.style.cursor = 'pointer';
+      }
       if (emailBtn) {
         emailBtn.disabled = false;
         emailBtn.style.opacity = '1';
@@ -330,9 +342,15 @@
 
     // Disable login buttons
     function disableLoginButtons() {
+      const googleBtn = document.getElementById('googleLoginBtn');
       const emailBtn = document.querySelector('#emailLoginForm button[type="submit"]');
       const resetBtn = document.getElementById('resetPasswordBtn');
       
+      if (googleBtn) {
+        googleBtn.disabled = true;
+        googleBtn.style.opacity = '0.7';
+        googleBtn.style.cursor = 'not-allowed';
+      }
       if (emailBtn) {
         emailBtn.disabled = true;
         emailBtn.style.opacity = '0.7';
@@ -368,9 +386,111 @@
       }
     }
 
-    // Email/Password login - checks if user exists in Firestore
+    // Create or update user document in Firestore
+    async function createUserDocument(user) {
+      try {
+        if (!db) {
+          console.error('[Firestore] Database not initialized');
+          return;
+        }
+
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (!userSnap.exists()) {
+          // Create new user document
+          await setDoc(userRef, {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName || '',
+            photoURL: user.photoURL || '',
+            provider: user.providerData[0]?.providerId || 'google.com',
+            createdAt: new Date().toISOString(),
+            lastLoginAt: new Date().toISOString(),
+            role: 'admin' // Default role for admin panel access
+          });
+          console.log('[Firestore] New user document created:', user.uid);
+        } else {
+          // Update last login time for existing user
+          await setDoc(userRef, {
+            lastLoginAt: new Date().toISOString()
+          }, { merge: true });
+          console.log('[Firestore] User document updated:', user.uid);
+        }
+      } catch (error) {
+        console.error('[Firestore] Error creating/updating user document:', error);
+        // Don't throw error here as auth was successful
+      }
+    }
+
+    // Google OAuth login
+    async function handleGoogleLogin() {
+      if (!isInitialized || !auth || !db) {
+        showToast('Authentication system not ready. Please try again.', 'error');
+        return;
+      }
+
+      const googleBtn = document.getElementById('googleLoginBtn');
+      setButtonLoading(googleBtn, true);
+
+      try {
+        const provider = new GoogleAuthProvider();
+        // Add scopes if needed
+        provider.addScope('email');
+        provider.addScope('profile');
+        
+        console.log('[Auth] Initiating Google sign-in...');
+        const result = await signInWithPopup(auth, provider);
+        
+        // This gives you a Google Access Token
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        const token = credential.accessToken;
+        
+        // The signed-in user info
+        const user = result.user;
+        console.log('[Auth] Google sign-in successful:', user.email);
+        
+        // Create/update user document in Firestore
+        await createUserDocument(user);
+        
+        // Redirect to admin panel after successful manual login
+        const currentPath = window.location.pathname;
+        const basePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+        window.location.href = basePath + '/panel/';
+        
+      } catch (error) {
+        console.error('[Auth] Google sign-in error:', error);
+        
+        let errorMessage = 'Google sign-in failed.';
+        
+        switch (error.code) {
+          case 'auth/popup-closed-by-user':
+            errorMessage = 'Sign-in cancelled.';
+            break;
+          case 'auth/popup-blocked':
+            errorMessage = 'Popup blocked. Please allow popups for this site.';
+            break;
+          case 'auth/network-request-failed':
+            errorMessage = 'Network error. Please check your connection.';
+            break;
+          case 'auth/unauthorized-domain':
+            errorMessage = 'This domain is not authorized for OAuth sign-in.';
+            break;
+          case 'auth/operation-not-allowed':
+            errorMessage = 'Google sign-in is not enabled. Contact administrator.';
+            break;
+          default:
+            errorMessage = `Sign-in failed: ${error.message}`;
+        }
+        
+        showToast(errorMessage, 'error');
+        setButtonLoading(googleBtn, false);
+      }
+    }
+
+    // Email/Password login
     async function handleEmailLogin(email, password) {
-      if (!isInitialized || !auth) {
+      if (!isInitialized || !auth || !db) {
         showToast('Authentication system not ready. Please try again.', 'error');
         return;
       }
@@ -383,28 +503,15 @@
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         
-        console.log('[Auth] Email sign-in successful, checking user in Firestore:', user.email);
+        console.log('[Auth] Email sign-in successful:', user.email);
         
-        // Check if user exists in Firestore
-        const userExists = await checkUserExists(user.uid);
+        // Create/update user document in Firestore
+        await createUserDocument(user);
         
-        if (!userExists) {
-          // User doesn't exist in Firestore - sign them out and show error
-          await signOut(auth);
-          console.log('[Auth] Access denied - user not registered:', user.email);
-          showToast('Access denied. Your account is not registered in the system. Please contact administrator.', 'error');
-          setButtonLoading(submitBtn, false);
-          return;
-        }
-        
-        // User exists - update their document and allow login
-        await updateUserDocument(user);
-        
-        // Show success message and redirect
-        showToast('Login successful! Redirecting...', 'success');
-        setTimeout(() => {
-          redirectToAdminPanel();
-        }, 1000);
+        // Redirect to admin panel after successful manual login
+        const currentPath = window.location.pathname;
+        const basePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+        window.location.href = basePath + '/panel/';
         
       } catch (error) {
         console.error('[Auth] Email sign-in error:', error);
@@ -492,7 +599,9 @@
     document.addEventListener('DOMContentLoaded', async () => {
       console.log('[Auth] Initializing application...');
       
-      // Setup event listeners
+      // Setup event listeners immediately (they'll check if initialized)
+      document.getElementById('googleLoginBtn').addEventListener('click', handleGoogleLogin);
+      
       document.getElementById('emailLoginForm').addEventListener('submit', (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
