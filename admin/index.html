@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Admin Login SJR MNU </title>
+  <title>Admin Login SJR MUN</title>
+  <!-- REMOVED CSP - Matching index.html -->
   <link rel="stylesheet" href="../handler/styles.css" />
   <link rel="icon" type="image/x-icon" href="../favicon.ico" />
   <style>
@@ -207,7 +208,7 @@
   </script>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
     import { 
       getAuth, 
       onAuthStateChanged, 
@@ -217,17 +218,14 @@
       signInWithPopup,
       setPersistence,
       browserSessionPersistence,
-      signOut,
-      fetchSignInMethodsForEmail, 
-      EmailAuthProvider, 
-      linkWithCredential 
-    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+      signOut
+    } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
     import { 
       getFirestore,
       doc,
       getDoc,
       setDoc
-    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+    } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore-lite.js";
 
     let auth = null;
     let app = null;
@@ -235,25 +233,7 @@
     let isAutoLogoutInProgress = false;
     let isInitialized = false;
 
-    // Helper functions from working code
-    function generateKey() {
-      return 'key-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-    }
-
-    function generateRandomId() {
-      return 'u-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 8);
-    }
-
-    function generateRandomPassword() {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+[]{}<>?';
-      let pwd = '';
-      for(let i = 0; i < 20; i++) {
-        pwd += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      return pwd;
-    }
-
-    // Initialize Firebase Auth and Firestore
+    // Initialize Firebase Auth and Firestore Lite
     async function initializeFirebaseAuth() {
       try {
         // Load Firebase configuration from API
@@ -267,7 +247,7 @@
         // Set session persistence
         await setPersistence(auth, browserSessionPersistence);
         
-        console.log('[Auth] Firebase Auth and Firestore initialized successfully');
+        console.log('[Auth] Firebase Auth and Firestore Lite initialized successfully');
         isInitialized = true;
         setupAuthListeners();
         enableLoginButtons();
