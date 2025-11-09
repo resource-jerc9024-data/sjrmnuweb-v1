@@ -6,7 +6,7 @@
   <title>Admin Panel SJR MUN</title>
   <link rel="stylesheet" href="../../handler/styles.css" />
   <link rel="icon" type="image/x-icon" href="../../favicon.ico" />
-  <!-- Include jsPDF library -->
+  <!-- Include jsPDF library from a reliable CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     body { min-height:100vh; background: radial-gradient(1200px 600px at 20% -10%, #7c3aed22, transparent), radial-gradient(1000px 500px at 120% 10%, #06b6d422, transparent), linear-gradient(180deg, #0b1020, #0f172a); color:#e5e7eb; }
@@ -161,6 +161,19 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+
+    // Check if jsPDF is loaded
+    function checkJsPdfLoaded() {
+      if (typeof window.jspdf === 'undefined') {
+        console.error('jsPDF not loaded properly');
+        return false;
+      }
+      if (typeof window.jspdf.jsPDF === 'undefined') {
+        console.error('jsPDF constructor not available');
+        return false;
+      }
+      return true;
+    }
 
     // Set persistence to LOCAL to maintain login state
     async function initializeAuth() {
@@ -477,62 +490,46 @@
       if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
     });
 
-    // PDF generation functions
+    // PDF generation functions - SIMPLIFIED VERSION
     function downloadRecordPdf(r) {
       if (!r) {
         showToast('No record data available', 'error');
         return;
       }
       
+      // Check if jsPDF is loaded
+      if (!checkJsPdfLoaded()) {
+        showToast('PDF library not loaded. Please refresh the page.', 'error');
+        return;
+      }
+      
       try {
         pdfLoading.classList.add('show');
         
-        // Use the global jsPDF from the script tag
-        const { jsPDF } = window.jspdf;
+        // Use the global jsPDF - SIMPLIFIED APPROACH
+        const jsPDF = window.jspdf.jsPDF;
         const doc = new jsPDF();
         
         let y = 20;
         
         // Header
-        doc.setFontSize(20);
-        doc.setFont(undefined, 'bold');
+        doc.setFontSize(16);
         doc.text('SJR MUN REGISTRATION', 105, y, { align: 'center' });
+        y += 10;
+        
+        doc.setFontSize(12);
+        doc.text(`Form #: ${r.id}`, 20, y);
         y += 15;
         
-        // Form Number
-        doc.setFontSize(16);
-        doc.setFont(undefined, 'bold');
-        doc.text(`Form #: ${r.id}`, 20, y);
-        y += 10;
-        
-        // Separator line
-        doc.setDrawColor(100, 100, 100);
-        doc.line(20, y, 190, y);
-        y += 10;
-        
         // Details
-        doc.setFontSize(12);
-        doc.setFont(undefined, 'normal');
-        
         const lines = recordToLines(r);
         for (const [k, v] of lines) {
-          if (k === 'Form #') continue; // Skip form number as it's already in header
+          if (k === 'Form #') continue;
           
-          const label = `${k}:`;
-          const value = v || 'N/A';
+          const text = `${k}: ${v || 'N/A'}`;
+          doc.text(text, 20, y);
+          y += 8;
           
-          doc.setFont(undefined, 'bold');
-          doc.text(label, 20, y);
-          doc.setFont(undefined, 'normal');
-          
-          // Split long text into multiple lines
-          const maxWidth = 160;
-          const splitText = doc.splitTextToSize(value.toString(), maxWidth);
-          doc.text(splitText, 60, y);
-          
-          y += (splitText.length * 7) + 5;
-          
-          // Add new page if needed
           if (y > 270) {
             doc.addPage();
             y = 20;
@@ -549,91 +546,71 @@
       } catch (error) {
         console.error('PDF generation error:', error);
         pdfLoading.classList.remove('show');
-        showToast('Error generating PDF: ' + error.message, 'error');
+        showToast('Error generating PDF', 'error');
       }
     }
 
-    // Export All PDF function
+    // Export All PDF function - SIMPLIFIED VERSION
     document.getElementById('exportPdfAllBtn').addEventListener('click', () => {
       if (!allRecords.length) {
         showToast('No data to export', 'error');
         return;
       }
       
+      // Check if jsPDF is loaded
+      if (!checkJsPdfLoaded()) {
+        showToast('PDF library not loaded. Please refresh the page.', 'error');
+        return;
+      }
+      
       try {
         pdfLoading.classList.add('show');
         
-        // Use the global jsPDF from the script tag
-        const { jsPDF } = window.jspdf;
+        // Use the global jsPDF - SIMPLIFIED APPROACH
+        const jsPDF = window.jspdf.jsPDF;
         const doc = new jsPDF();
         
         let y = 20;
-        let pageNumber = 1;
+        
+        // Title
+        doc.setFontSize(16);
+        doc.text('SJR MUN - ALL REGISTRATIONS', 105, y, { align: 'center' });
+        y += 15;
         
         // Process each record
         allRecords.forEach((r, index) => {
-          // Add new page for each record (except the first one)
           if (index > 0) {
             doc.addPage();
             y = 20;
-            pageNumber++;
           }
           
-          // Header for each record
-          doc.setFontSize(16);
-          doc.setFont(undefined, 'bold');
-          doc.text(`SJR MUN REGISTRATION - Form #${r.id}`, 20, y);
+          doc.setFontSize(12);
+          doc.text(`Form #${r.id} - ${r.full_name}`, 20, y);
           y += 10;
-          
-          // Separator line
-          doc.setDrawColor(100, 100, 100);
-          doc.line(20, y, 190, y);
-          y += 10;
-          
-          // Details
-          doc.setFontSize(10);
-          doc.setFont(undefined, 'normal');
           
           const lines = recordToLines(r);
+          doc.setFontSize(10);
+          
           for (const [k, v] of lines) {
-            const label = `${k}:`;
-            const value = v || 'N/A';
+            if (k === 'Form #') continue;
             
-            doc.setFont(undefined, 'bold');
-            doc.text(label, 20, y);
-            doc.setFont(undefined, 'normal');
+            const text = `${k}: ${v || 'N/A'}`;
+            doc.text(text, 20, y);
+            y += 6;
             
-            // Split long text into multiple lines
-            const maxWidth = 140;
-            const splitText = doc.splitTextToSize(value.toString(), maxWidth);
-            doc.text(splitText, 70, y);
-            
-            y += (splitText.length * 5) + 4;
-            
-            // Add new page if needed within the same record
             if (y > 270) {
               doc.addPage();
               y = 20;
-              pageNumber++;
             }
           }
           
-          // Add separator between records (if not last record)
+          // Add separator
           if (index < allRecords.length - 1) {
             y += 5;
-            doc.setDrawColor(200, 200, 200);
             doc.line(20, y, 190, y);
             y += 10;
           }
         });
-        
-        // Add page numbers
-        const totalPages = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= totalPages; i++) {
-          doc.setPage(i);
-          doc.setFontSize(8);
-          doc.text(`Page ${i} of ${totalPages}`, 195, 287, { align: 'right' });
-        }
         
         // Save the PDF
         setTimeout(() => {
@@ -645,7 +622,7 @@
       } catch (error) {
         console.error('All PDF export error:', error);
         pdfLoading.classList.remove('show');
-        showToast('Error exporting all records as PDF: ' + error.message, 'error');
+        showToast('Error exporting all records as PDF', 'error');
       }
     });
 
