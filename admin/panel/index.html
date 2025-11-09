@@ -38,6 +38,12 @@
     .kv { display:grid; grid-template-columns: 180px 1fr; gap:10px; }
     .kv .k { color:#94a3b8; }
     .hidden { display: none; }
+    
+    /* Toast styles */
+    .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:#0b1220;border:1px solid #1f2937;color:#e5e7eb;border-radius:12px;padding:12px 14px;box-shadow:0 20px 50px rgba(0,0,0,.5);display:flex;align-items:center;gap:12px;min-width:260px;z-index:1000;transition:.25s opacity,.25s transform}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+    .toast.success{border-color:rgba(158,240,26,.5)}
+    .toast.error{border-color:#7f1d1d}
   </style>
 </head>
 <body class="auth-pending">
@@ -85,34 +91,6 @@
     </div>
   </div>
 
-  <!-- Toast notification system -->
-  <script>
-    (function(){
-      function ensureToast(){
-        let el = document.getElementById('popup');
-        if (!el) {
-          el = document.createElement('div');
-          el.id = 'popup';
-          el.className = 'toast';
-          el.innerHTML = '<span id="popupText"></span><button id="popupClose" class="btn ghost">Close</button>';
-          document.body.appendChild(el);
-          const close = el.querySelector('#popupClose');
-          close.addEventListener('click', () => { el.classList.remove('show','success','error'); });
-        }
-        return el;
-      }
-      window.showToast = function(msg, kind='success'){
-        const el = ensureToast();
-        const text = el.querySelector('#popupText');
-        if (text) text.textContent = msg;
-        el.classList.remove('success','error');
-        el.classList.add('show', kind);
-        clearTimeout(el.__hideT);
-        el.__hideT = setTimeout(() => el.classList.remove('show','success','error'), 6000);
-      }
-    })();
-  </script>
-  
   <!-- Detail Modal -->
   <div id="detailModal" class="modal-overlay">
     <div class="modal">
@@ -128,8 +106,12 @@
 
   <!-- Firebase Configuration -->
   <script type="module">
+    // Import Firebase modules
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-analytics.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+    import { getFirestore, collection, getDocs, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+    
+    // Firebase configuration
     const firebaseConfig = {
       apiKey: "AIzaSyDQ_ox-jKUM6ALhWrIymVrGRrDnBAb7bHE",
       authDomain: "sjrmnuweb-3cac4.firebaseapp.com",
@@ -139,68 +121,92 @@
       appId: "1:402828314003:web:eb48510e51d5f439b19466",
       measurementId: "G-6D259WD4H6"
     };
-    const app = initializeApp(firebaseConfig);
-    try { getAnalytics(app); } catch(e) { /* analytics optional in some envs */ }
-    window.firebaseApp = app;
-  </script>
-  
-  <!-- Authentication Check -->
-  <script type="module">
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-    const authCheck = getAuth(window.firebaseApp);
-    onAuthStateChanged(authCheck, (user) => {
-      if (!user) { 
-        window.location.replace('../'); 
-        return; 
-      }
-      document.body.classList.remove('auth-pending');
-      window.dispatchEvent(new Event('auth-ok'));
-    });
-  </script>
-  
-  <!-- Main Admin Panel Logic -->
-  <script type="module">
-    import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-    import { getFirestore, collection, getDocs, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
-    import { jsPDF } from "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.es.min.js";
-    import * as XLSX from "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
-    const auth = getAuth(window.firebaseApp);
-    const db = getFirestore(window.firebaseApp);
 
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Toast notification system
+    function ensureToast(){
+      let el = document.getElementById('popup');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'popup';
+        el.className = 'toast';
+        el.innerHTML = '<span id="popupText"></span><button id="popupClose" class="btn ghost">Close</button>';
+        document.body.appendChild(el);
+        const close = el.querySelector('#popupClose');
+        close.addEventListener('click', () => { el.classList.remove('show','success','error'); });
+      }
+      return el;
+    }
+    
+    window.showToast = function(msg, kind='success'){
+      const el = ensureToast();
+      const text = el.querySelector('#popupText');
+      if (text) text.textContent = msg;
+      el.classList.remove('success','error');
+      el.classList.add('show', kind);
+      clearTimeout(el.__hideT);
+      el.__hideT = setTimeout(() => el.classList.remove('show','success','error'), 6000);
+    };
+
+    // DOM elements
     const tbody = document.getElementById('recordsTbody');
     const details = document.getElementById('detailsPanel');
     const searchInput = document.getElementById('searchInput');
+    const logoutBtn = document.getElementById('logoutBtn');
 
     let allRecords = [];
     let unsubscribe = null;
 
-    if (auth.currentUser) {
+    // Authentication state listener
+    onAuthStateChanged(auth, (user) => {
+      if (!user) { 
+        window.location.href = '../'; 
+        return; 
+      }
       document.body.classList.remove('auth-pending');
       loadRecords();
       setupRealtimeListener();
-    } else {
-      window.addEventListener('auth-ok', () => {
-        loadRecords();
-        setupRealtimeListener();
-      }, { once: true });
-    }
-
-    function setupRealtimeListener() {
-      if (unsubscribe) unsubscribe();
-      const q = query(collection(db, 'records'), orderBy('created_at', 'desc'));
-      unsubscribe = onSnapshot(q, () => {
-        console.log('[Admin] Realtime update received');
-      }, (error) => console.error('[Admin] Realtime listener error:', error));
-    }
-
-    document.getElementById('logoutBtn').addEventListener('click', async () => {
-      if (unsubscribe) unsubscribe();
-      await signOut(auth);
-      window.location.href = '../';
     });
 
+    // Setup real-time listener for new records
+    function setupRealtimeListener() {
+      if (unsubscribe) {
+        unsubscribe(); // Clean up any existing listener
+      }
+      
+      const q = query(collection(db, 'records'), orderBy('created_at', 'desc'));
+      unsubscribe = onSnapshot(q, (snapshot) => {
+        console.log('[Admin] Realtime update received');
+        // Refresh data when changes are detected
+        loadRecords();
+      }, (error) => {
+        console.error('[Admin] Realtime listener error:', error);
+        showToast('Error connecting to database', 'error');
+      });
+    }
+
+    // Logout handler
+    logoutBtn.addEventListener('click', async () => {
+      try {
+        if (unsubscribe) {
+          unsubscribe();
+        }
+        await signOut(auth);
+        window.location.href = '../';
+      } catch (error) {
+        console.error('Logout error:', error);
+        showToast('Error during logout', 'error');
+      }
+    });
+
+    // Refresh button handler
     document.getElementById('refreshBtn').addEventListener('click', loadRecords);
 
+    // Search functionality
     searchInput.addEventListener('input', () => renderRows(filterRecords(searchInput.value)));
 
     function filterRecords(q) {
@@ -214,12 +220,15 @@
       );
     }
 
+    // Load records from Firestore
     async function loadRecords() {
       try {
         tbody.innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
+        console.log('[Admin] Fetching records...');
         const qy = query(collection(db, 'records'), orderBy('created_at', 'desc'));
         const snap = await getDocs(qy);
         allRecords = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        console.log(`[Admin] Loaded ${allRecords.length} records`);
         renderRows(allRecords);
         showToast(`Loaded ${allRecords.length} records`, 'success');
       } catch (err) {
@@ -229,12 +238,14 @@
       }
     }
 
+    // Render table rows
     function renderRows(rows) {
       tbody.innerHTML = '';
       if (!rows.length) {
         tbody.innerHTML = '<tr><td colspan="7">No records found</td></tr>';
         return;
       }
+      
       for (const r of rows) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -251,6 +262,7 @@
         tbody.appendChild(tr);
       }
 
+      // Add event listeners to buttons
       tbody.querySelectorAll('[data-view]').forEach(btn => btn.addEventListener('click', (e) => {
         const id = e.currentTarget.getAttribute('data-view');
         const rec = allRecords.find(x => x.id === id);
@@ -264,9 +276,19 @@
       }));
     }
 
-    function escapeHtml(s='') { return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-    function formatDate(ts) { try { if (ts && ts.toDate) return ts.toDate().toLocaleString(); } catch {} return ts || ''; }
+    // Utility functions
+    function escapeHtml(s='') {
+      return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    }
 
+    function formatDate(ts) {
+      try {
+        if (ts && ts.toDate) return ts.toDate().toLocaleString();
+      } catch {}
+      return ts || '';
+    }
+
+    // Show details panel
     function showDetails(r) {
       if (!r) return;
       details.classList.remove('hidden');
@@ -299,7 +321,10 @@
       document.getElementById('viewMoreBtn').onclick = () => openDetailModal(r);
     }
 
-    function detailRow(label, value) { return `<div><div class="muted">${escapeHtml(label)}</div><div>${escapeHtml(value||'')}</div></div>`; }
+    function detailRow(label, value) {
+      return `<div><div class="muted">${escapeHtml(label)}</div><div>${escapeHtml(value||'')}</div></div>`;
+    }
+
     function recordToLines(r) {
       return [
         ['Form #', r.id],
@@ -321,6 +346,7 @@
       ];
     }
 
+    // Modal functions
     function openDetailModal(r) {
       const overlay = document.getElementById('detailModal');
       const modalKV = document.getElementById('modalKV');
@@ -331,70 +357,117 @@
       overlay.style.display = 'flex';
     }
 
-    document.getElementById('closeModalBtn').addEventListener('click', () => { document.getElementById('detailModal').style.display = 'none'; });
-    document.getElementById('detailModal').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.style.display = 'none'; });
+    document.getElementById('closeModalBtn').addEventListener('click', () => {
+      document.getElementById('detailModal').style.display = 'none';
+    });
 
+    document.getElementById('detailModal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
+    });
+
+    // PDF generation functions
     function downloadRecordPdf(r) {
       const doc = new jsPDF();
       let y = 14;
-      doc.setFontSize(16); doc.text(`SJR MUN Registration`, 14, y); y += 8;
-      doc.setFontSize(12); doc.text(`Form # ${r.id}`, 14, y); y += 8;
-      doc.setDrawColor(200); doc.line(14, y, 196, y); y += 6;
+      doc.setFontSize(16); 
+      doc.text(`SJR MUN Registration`, 14, y); 
+      y += 8;
+      doc.setFontSize(12); 
+      doc.text(`Form # ${r.id}`, 14, y); 
+      y += 8;
+      doc.setDrawColor(200); 
+      doc.line(14, y, 196, y); 
+      y += 6;
       doc.setFontSize(11);
+      
       for (const [k,v] of recordToLines(r)) {
         const lines = doc.splitTextToSize(`${k}: ${v||''}`, 182);
-        doc.text(lines, 14, y); y += 6 + (lines.length-1)*5;
-        if (y > 280) { doc.addPage(); y = 14; }
+        doc.text(lines, 14, y); 
+        y += 6 + (lines.length-1)*5;
+        if (y > 280) { 
+          doc.addPage(); 
+          y = 14; 
+        }
       }
       doc.save(`form_${r.id}.pdf`);
     }
 
     document.getElementById('exportPdfAllBtn').addEventListener('click', () => {
       if (!allRecords.length) return showToast('No data to export', 'error');
+      
       const doc = new jsPDF();
       let y = 14;
-      doc.setFontSize(16); doc.text('All Registrations', 14, y); y += 8;
-      doc.setDrawColor(200); doc.line(14, y, 196, y); y += 6;
+      doc.setFontSize(16); 
+      doc.text('All Registrations', 14, y); 
+      y += 8;
+      doc.setDrawColor(200); 
+      doc.line(14, y, 196, y); 
+      y += 6;
+      
       for (const r of allRecords) {
-        doc.setFontSize(12); doc.text(`Form # ${r.id} - ${r.full_name||''}`, 14, y); y += 6;
+        doc.setFontSize(12); 
+        doc.text(`Form # ${r.id} - ${r.full_name||''}`, 14, y); 
+        y += 6;
         doc.setFontSize(10);
-        for (const [k,v] of recordToLines(r)) {
+        const lines = recordToLines(r);
+        
+        for (const [k,v] of lines) {
           const wrapped = doc.splitTextToSize(`${k}: ${v||''}`, 182);
-          doc.text(wrapped, 14, y); y += 5 + (wrapped.length-1)*4;
-          if (y > 270) { doc.addPage(); y = 14; }
+          doc.text(wrapped, 14, y); 
+          y += 5 + (wrapped.length-1)*4;
+          if (y > 270) { 
+            doc.addPage(); 
+            y = 14; 
+          }
         }
-        y += 4; doc.setDrawColor(230); doc.line(14, y, 196, y); y += 6;
-        if (y > 270) { doc.addPage(); y = 14; }
+        y += 4; 
+        doc.setDrawColor(230); 
+        doc.line(14, y, 196, y); 
+        y += 6;
+        if (y > 270) { 
+          doc.addPage(); 
+          y = 14; 
+        }
       }
       doc.save('all_registrations.pdf');
       showToast('All records exported as PDF', 'success');
     });
 
-    document.getElementById('exportXlsxBtn').addEventListener('click', () => {
+    // Excel export
+    document.getElementById('exportXlsxBtn').addEventListener('click', async () => {
       if (!allRecords.length) return showToast('No data to export', 'error');
-      const data = allRecords.map(r => ({
-        form_number: r.id,
-        full_name: r.full_name,
-        father_name: r.father_name,
-        mother_name: r.mother_name,
-        gender: r.gender,
-        dob: r.dob,
-        institute: r.institute,
-        class: r.class,
-        section: r.section,
-        phone: r.phone,
-        email: r.email,
-        address: r.address,
-        landmark: r.landmark,
-        city: r.city,
-        category: r.category,
-        created_at: formatDate(r.created_at)
-      }));
-      const ws = XLSX.utils.json_to_sheet(data);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Registrations');
-      XLSX.writeFile(wb, 'registrations.xlsx');
-      showToast('Records exported as Excel', 'success');
+      
+      try {
+        const data = allRecords.map(r => ({
+          form_number: r.id,
+          full_name: r.full_name,
+          father_name: r.father_name,
+          mother_name: r.mother_name,
+          gender: r.gender,
+          dob: r.dob,
+          institute: r.institute,
+          class: r.class,
+          section: r.section,
+          phone: r.phone,
+          email: r.email,
+          address: r.address,
+          landmark: r.landmark,
+          city: r.city,
+          category: r.category,
+          created_at: formatDate(r.created_at)
+        }));
+        
+        // Dynamically import XLSX
+        const XLSX = await import("https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm");
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Registrations');
+        XLSX.writeFile(wb, 'registrations.xlsx');
+        showToast('Records exported as Excel', 'success');
+      } catch (error) {
+        console.error('Excel export error:', error);
+        showToast('Error exporting Excel file', 'error');
+      }
     });
   </script>
 </body>
