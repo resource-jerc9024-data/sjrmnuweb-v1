@@ -302,11 +302,11 @@
     }
 
     // Redirect to admin panel
-    function redirectToAdminPanel() {
-      const currentPath = window.location.pathname;
-      const basePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
-      console.log('[Auth] Redirecting to admin panel...');
-      window.location.href = basePath + 'panel/';
+function redirectToAdminPanel() {
+  console.log('[Auth] Redirecting to admin panel...');
+  // Simple fixed path - always go to panel in the same directory
+  window.location.href = 'panel/';
+}
     }
 
     // Enable login buttons
