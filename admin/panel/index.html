@@ -44,6 +44,11 @@
     .toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
     .toast.success{border-color:rgba(158,240,26,.5)}
     .toast.error{border-color:#7f1d1d}
+
+    /* Loading state */
+    .loading { display: flex; justify-content: center; align-items: center; padding: 40px; }
+    .loading-spinner { width: 40px; height: 40px; border: 4px solid #1f2937; border-left: 4px solid #9ef01a; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 </head>
 <body class="auth-pending">
@@ -83,7 +88,15 @@
                 <th class="nowrap">Actions</th>
               </tr>
             </thead>
-            <tbody id="recordsTbody"></tbody>
+            <tbody id="recordsTbody">
+              <tr>
+                <td colspan="8">
+                  <div class="loading">
+                    <div class="loading-spinner"></div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
           </table>
         </div>
 
@@ -109,7 +122,14 @@
   <script type="module">
     // Import Firebase modules
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+    import { 
+      getAuth, 
+      onAuthStateChanged, 
+      signOut, 
+      setPersistence, 
+      browserSessionPersistence,
+      browserLocalPersistence 
+    } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
     import { getFirestore, collection, getDocs, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
     
     // Firebase configuration
@@ -127,6 +147,18 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+
+    // Set persistence to LOCAL to maintain login state
+    async function initializeAuth() {
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+        console.log('[Auth] Persistence set to LOCAL');
+      } catch (error) {
+        console.error('[Auth] Persistence error:', error);
+        // Fallback to session persistence
+        await setPersistence(auth, browserSessionPersistence);
+      }
+    }
 
     // Toast notification system
     function ensureToast(){
@@ -161,17 +193,54 @@
 
     let allRecords = [];
     let unsubscribe = null;
+    let authInitialized = false;
 
-    // Authentication state listener
-    onAuthStateChanged(auth, (user) => {
+    // Initialize auth and set up state listener
+    async function initApp() {
+      try {
+        await initializeAuth();
+        authInitialized = true;
+        
+        // Set up auth state listener
+        onAuthStateChanged(auth, handleAuthStateChange, handleAuthError);
+      } catch (error) {
+        console.error('[App] Initialization error:', error);
+        showToast('Application initialization failed', 'error');
+      }
+    }
+
+    // Handle authentication state changes
+    function handleAuthStateChange(user) {
+      console.log('[Auth] State changed:', user ? 'User logged in' : 'No user');
+      
       if (!user) { 
+        console.log('[Auth] Redirecting to login...');
         window.location.href = '../'; 
         return; 
       }
+      
+      // User is authenticated
       document.body.classList.remove('auth-pending');
+      console.log('[Auth] User authenticated:', user.email);
       loadRecords();
       setupRealtimeListener();
-    });
+    }
+
+    // Handle authentication errors
+    function handleAuthError(error) {
+      console.error('[Auth] Auth state error:', error);
+      
+      // Don't redirect immediately for network errors
+      if (error.code === 'auth/network-request-failed') {
+        showToast('Network error - check connection', 'error');
+        return;
+      }
+      
+      // For other auth errors, redirect to login
+      setTimeout(() => {
+        window.location.href = '../';
+      }, 2000);
+    }
 
     // Setup real-time listener for new records
     function setupRealtimeListener() {
@@ -179,15 +248,25 @@
         unsubscribe(); // Clean up any existing listener
       }
       
-      const q = query(collection(db, 'records'), orderBy('created_at', 'desc'));
-      unsubscribe = onSnapshot(q, (snapshot) => {
-        console.log('[Admin] Realtime update received');
-        // Refresh data when changes are detected
-        loadRecords();
-      }, (error) => {
-        console.error('[Admin] Realtime listener error:', error);
-        showToast('Error connecting to database', 'error');
-      });
+      try {
+        const q = query(collection(db, 'records'), orderBy('created_at', 'desc'));
+        unsubscribe = onSnapshot(q, 
+          (snapshot) => {
+            console.log('[Admin] Realtime update received');
+            // Refresh data when changes are detected
+            loadRecords();
+          }, 
+          (error) => {
+            console.error('[Admin] Realtime listener error:', error);
+            // Don't show error for temporary network issues
+            if (!error.message.includes('unavailable')) {
+              showToast('Error connecting to database', 'error');
+            }
+          }
+        );
+      } catch (error) {
+        console.error('[Admin] Realtime setup error:', error);
+      }
     }
 
     // Logout handler
@@ -197,7 +276,7 @@
           unsubscribe();
         }
         await signOut(auth);
-        window.location.href = '../';
+        // Let the auth state change handler handle the redirect
       } catch (error) {
         console.error('Logout error:', error);
         showToast('Error during logout', 'error');
@@ -224,18 +303,28 @@
     // Load records from Firestore
     async function loadRecords() {
       try {
-        tbody.innerHTML = '<tr><td colspan="8">Loading...</td></tr>';
+        // Show loading state
+        tbody.innerHTML = '<tr><td colspan="8"><div class="loading"><div class="loading-spinner"></div></div></td></tr>';
+        
         console.log('[Admin] Fetching records...');
         const qy = query(collection(db, 'records'), orderBy('created_at', 'desc'));
         const snap = await getDocs(qy);
         allRecords = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         console.log(`[Admin] Loaded ${allRecords.length} records`);
         renderRows(allRecords);
-        showToast(`Loaded ${allRecords.length} records`, 'success');
+        
+        // Only show success toast on manual refresh or initial load
+        if (!searchInput.value) {
+          showToast(`Loaded ${allRecords.length} records`, 'success');
+        }
       } catch (err) {
         console.error('[Admin] Failed to load records:', err);
-        tbody.innerHTML = '<tr><td colspan="8">Failed to load records</td></tr>';
-        showToast('Failed to load records. Check console for details.', 'error');
+        tbody.innerHTML = '<tr><td colspan="8">Failed to load records. Please refresh.</td></tr>';
+        
+        // Don't show error for temporary network issues
+        if (!err.message.includes('unavailable')) {
+          showToast('Failed to load records', 'error');
+        }
       }
     }
 
@@ -496,6 +585,9 @@
         showToast('Error exporting Excel file', 'error');
       }
     });
+
+    // Initialize the application
+    initApp();
   </script>
   
   <!-- Include jsPDF library -->

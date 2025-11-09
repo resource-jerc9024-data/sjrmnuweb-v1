@@ -219,13 +219,20 @@
       browserSessionPersistence,
       signOut
     } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+    import { 
+      getFirestore,
+      doc,
+      getDoc,
+      setDoc
+    } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 
     let auth = null;
     let app = null;
+    let db = null;
     let isAutoLogoutInProgress = false;
     let isInitialized = false;
 
-    // Initialize Firebase Auth
+    // Initialize Firebase Auth and Firestore
     async function initializeFirebaseAuth() {
       try {
         // Load Firebase configuration from API
@@ -234,17 +241,18 @@
         // Initialize Firebase app
         app = initializeApp(firebaseConfig, 'AdminAuth');
         auth = getAuth(app);
+        db = getFirestore(app);
         
         // Set session persistence
         await setPersistence(auth, browserSessionPersistence);
         
-        console.log('[Auth] Firebase Auth initialized successfully');
+        console.log('[Auth] Firebase Auth and Firestore initialized successfully');
         isInitialized = true;
         setupAuthListeners();
         enableLoginButtons();
         
       } catch (error) {
-        console.error('[Auth] Failed to initialize Firebase Auth:', error);
+        console.error('[Auth] Failed to initialize Firebase:', error);
         showToast('Failed to initialize authentication system.', 'error');
         // Still enable buttons even if Firebase fails, so user can at least try
         enableLoginButtons();
@@ -378,9 +386,46 @@
       }
     }
 
+    // Create or update user document in Firestore
+    async function createUserDocument(user) {
+      try {
+        if (!db) {
+          console.error('[Firestore] Database not initialized');
+          return;
+        }
+
+        const userRef = doc(db, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (!userSnap.exists()) {
+          // Create new user document
+          await setDoc(userRef, {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName || '',
+            photoURL: user.photoURL || '',
+            provider: user.providerData[0]?.providerId || 'google.com',
+            createdAt: new Date().toISOString(),
+            lastLoginAt: new Date().toISOString(),
+            role: 'admin' // Default role for admin panel access
+          });
+          console.log('[Firestore] New user document created:', user.uid);
+        } else {
+          // Update last login time for existing user
+          await setDoc(userRef, {
+            lastLoginAt: new Date().toISOString()
+          }, { merge: true });
+          console.log('[Firestore] User document updated:', user.uid);
+        }
+      } catch (error) {
+        console.error('[Firestore] Error creating/updating user document:', error);
+        // Don't throw error here as auth was successful
+      }
+    }
+
     // Google OAuth login
     async function handleGoogleLogin() {
-      if (!isInitialized || !auth) {
+      if (!isInitialized || !auth || !db) {
         showToast('Authentication system not ready. Please try again.', 'error');
         return;
       }
@@ -404,6 +449,9 @@
         // The signed-in user info
         const user = result.user;
         console.log('[Auth] Google sign-in successful:', user.email);
+        
+        // Create/update user document in Firestore
+        await createUserDocument(user);
         
         // Redirect to admin panel after successful manual login
         const currentPath = window.location.pathname;
@@ -442,7 +490,7 @@
 
     // Email/Password login
     async function handleEmailLogin(email, password) {
-      if (!isInitialized || !auth) {
+      if (!isInitialized || !auth || !db) {
         showToast('Authentication system not ready. Please try again.', 'error');
         return;
       }
@@ -456,6 +504,9 @@
         const user = userCredential.user;
         
         console.log('[Auth] Email sign-in successful:', user.email);
+        
+        // Create/update user document in Firestore
+        await createUserDocument(user);
         
         // Redirect to admin panel after successful manual login
         const currentPath = window.location.pathname;
@@ -590,6 +641,6 @@
         enableLoginButtons();
       }
     });
-</script>
+  </script>
 </body>
 </html>

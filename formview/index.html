@@ -415,7 +415,7 @@
     window.loadFirebaseConfig = async function loadFirebaseConfig(){
       try {
         if (window.FIREBASE_API_KEY && window.FIREBASE_PROJECT_ID) return true;
-        const res = await fetch('/api/env');
+        const res = await fetch('../api/env');
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const cfg = await res.json();
         if (!cfg.FIREBASE_API_KEY || !cfg.FIREBASE_PROJECT_ID) throw new Error('Missing required Firebase configuration');
