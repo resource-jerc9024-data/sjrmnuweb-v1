@@ -6,8 +6,8 @@
   <title>Admin Panel SJR MUN</title>
   <link rel="stylesheet" href="../../handler/styles.css" />
   <link rel="icon" type="image/x-icon" href="../../favicon.ico" />
-  <!-- Include jsPDF library from allowed CDN -->
-  <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <!-- Include jsPDF library from a reliable CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     body { min-height:100vh; background: radial-gradient(1200px 600px at 20% -10%, #7c3aed22, transparent), radial-gradient(1000px 500px at 120% 10%, #06b6d422, transparent), linear-gradient(180deg, #0b1020, #0f172a); color:#e5e7eb; }
     .admin-shell { min-height:100vh; display:flex; flex-direction:column; }
@@ -166,38 +166,13 @@
     function checkJsPdfLoaded() {
       if (typeof window.jspdf === 'undefined') {
         console.error('jsPDF not loaded properly');
-        // Try alternative access method
-        if (typeof window.jsPDF !== 'undefined') {
-          console.log('Found jsPDF in window.jsPDF');
-          return true;
-        }
         return false;
       }
       if (typeof window.jspdf.jsPDF === 'undefined') {
-        console.error('jsPDF constructor not available in jspdf.jsPDF');
-        // Try alternative access method
-        if (typeof window.jsPDF !== 'undefined') {
-          console.log('Found jsPDF in window.jsPDF');
-          return true;
-        }
+        console.error('jsPDF constructor not available');
         return false;
       }
       return true;
-    }
-
-    // Get jsPDF constructor with fallbacks
-    function getJsPDF() {
-      // Try multiple possible locations for jsPDF
-      if (typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF !== 'undefined') {
-        return window.jspdf.jsPDF;
-      }
-      if (typeof window.jsPDF !== 'undefined') {
-        return window.jsPDF;
-      }
-      if (typeof jspdf !== 'undefined' && typeof jspdf.jsPDF !== 'undefined') {
-        return jspdf.jsPDF;
-      }
-      throw new Error('jsPDF not found');
     }
 
     // Set persistence to LOCAL to maintain login state
@@ -515,18 +490,24 @@
       if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
     });
 
-    // PDF generation functions
+    // PDF generation functions - SIMPLIFIED VERSION
     function downloadRecordPdf(r) {
       if (!r) {
         showToast('No record data available', 'error');
         return;
       }
       
+      // Check if jsPDF is loaded
+      if (!checkJsPdfLoaded()) {
+        showToast('PDF library not loaded. Please refresh the page.', 'error');
+        return;
+      }
+      
       try {
         pdfLoading.classList.add('show');
         
-        // Get jsPDF with fallback
-        const jsPDF = getJsPDF();
+        // Use the global jsPDF - SIMPLIFIED APPROACH
+        const jsPDF = window.jspdf.jsPDF;
         const doc = new jsPDF();
         
         let y = 20;
@@ -565,22 +546,28 @@
       } catch (error) {
         console.error('PDF generation error:', error);
         pdfLoading.classList.remove('show');
-        showToast('Error generating PDF: ' + error.message, 'error');
+        showToast('Error generating PDF', 'error');
       }
     }
 
-    // Export All PDF function
+    // Export All PDF function - SIMPLIFIED VERSION
     document.getElementById('exportPdfAllBtn').addEventListener('click', () => {
       if (!allRecords.length) {
         showToast('No data to export', 'error');
         return;
       }
       
+      // Check if jsPDF is loaded
+      if (!checkJsPdfLoaded()) {
+        showToast('PDF library not loaded. Please refresh the page.', 'error');
+        return;
+      }
+      
       try {
         pdfLoading.classList.add('show');
         
-        // Get jsPDF with fallback
-        const jsPDF = getJsPDF();
+        // Use the global jsPDF - SIMPLIFIED APPROACH
+        const jsPDF = window.jspdf.jsPDF;
         const doc = new jsPDF();
         
         let y = 20;
@@ -635,7 +622,7 @@
       } catch (error) {
         console.error('All PDF export error:', error);
         pdfLoading.classList.remove('show');
-        showToast('Error exporting all records as PDF: ' + error.message, 'error');
+        showToast('Error exporting all records as PDF', 'error');
       }
     });
 
