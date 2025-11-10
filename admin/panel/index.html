@@ -23,7 +23,7 @@
     .table-wrap { overflow:auto; border:1px solid #1f2937; border-radius:12px; }
     .table { width:100%; border-collapse: separate; border-spacing:0; }
     .table thead th { position:sticky; top:0; background:#0b1220; color:#cbd5e1; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid #1f2937; padding:10px 12px; }
-    .table tbody td { border-bottom:1px solid #0f1a2e; padding:10px 12px; font-size:14px; color:#e5e7eb; }
+    .table tbody td { border-bottom:1px solid #0f1a2e; padding:10px 12px; font-size:14px; color:#e5e7eb; word-break: break-word; max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
     .muted { color:#94a3b8; font-size:12px; }
     .nowrap { white-space:nowrap; }
     .details { padding:16px; background:#0b1220; border:1px solid #1f2937; border-radius:12px; margin-top:14px; }
@@ -36,10 +36,14 @@
     .modal-overlay { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.5); z-index:50; padding:20px; }
     .modal { width:100%; max-width:720px; background:#0b1220; border:1px solid #1f2937; border-radius:14px; box-shadow:0 30px 80px rgba(0,0,0,.6); }
     .modal-head { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid #1f2937; }
-    .modal-body { padding:14px 16px; max-height:70vh; overflow:auto; }
-    .kv { display:grid; grid-template-columns: 180px 1fr; gap:10px; }
-    .kv .k { color:#94a3b8; }
+    .modal-body { padding:14px 16px; max-height:70vh; overflow:auto; overflow-wrap: break-word; }
+    .kv { display:grid; grid-template-columns: minmax(120px, max-content) 1fr; gap:12px; align-items:start; }
+    .kv div:nth-child(even) { word-break: break-word; overflow-wrap: break-word; }
     .hidden { display: none; }
+    
+    /* Details panel grid */
+    .details > div:last-child { display:grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:12px; }
+    .details > div:last-child > div > div:nth-child(even) { word-break: break-word; overflow-wrap: break-word; }
     
     /* Toast styles */
     .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:#0b1220;border:1px solid #1f2937;color:#e5e7eb;border-radius:12px;padding:12px 14px;box-shadow:0 20px 50px rgba(0,0,0,.5);display:flex;align-items:center;gap:12px;min-width:260px;z-index:1000;transition:.25s opacity,.25s transform}
@@ -55,6 +59,16 @@
     /* PDF loading overlay */
     .pdf-loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 1000; color: white; font-size: 18px; }
     .pdf-loading.show { display: flex; }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+      .kv { grid-template-columns: 1fr; gap: 8px; }
+      .kv .k { font-weight: 600; color: #e5e7eb; border-bottom: 1px solid #1f2937; padding-bottom: 4px; }
+      .details > div:last-child { grid-template-columns: 1fr; }
+      .modal { margin: 10px; }
+      .toolbar { flex-direction: column; align-items: stretch; }
+      .searchbar { min-width: auto; }
+    }
   </style>
 </head>
 <body class="auth-pending">
@@ -447,7 +461,7 @@
             <button class="btn ghost" id="closeDetailsBtn">Close</button>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(250px, 1fr));gap:12px;margin-top:12px;">
           ${detailRow('Full Name', r.full_name)}
           ${detailRow("Father's Name", r.father_name)}
           ${detailRow("Mother's Name", r.mother_name)}
@@ -472,7 +486,12 @@
     }
 
     function detailRow(label, value) {
-      return `<div><div class="muted">${escapeHtml(label)}</div><div>${escapeHtml(value||'')}</div></div>`;
+      const escapedValue = escapeHtml(value || '');
+      // Add specific handling for long email addresses and addresses
+      if ((label === 'Email' || label === 'Address') && escapedValue.length > 30) {
+        return `<div><div class="muted">${escapeHtml(label)}</div><div style="word-break: break-word; overflow-wrap: break-word;">${escapedValue}</div></div>`;
+      }
+      return `<div><div class="muted">${escapeHtml(label)}</div><div>${escapedValue}</div></div>`;
     }
 
     function recordToLines(r) {
@@ -503,7 +522,16 @@
       const title = document.getElementById('modalTitle');
       title.textContent = `Applicant – Form #${r.form_number || r.id}`;
       const rows = recordToLines(r);
-      modalKV.innerHTML = rows.map(([k,v]) => `<div class="k">${escapeHtml(k)}</div><div>${escapeHtml(v||'')}</div>`).join('');
+      
+      modalKV.innerHTML = rows.map(([k, v]) => {
+        const escapedValue = escapeHtml(v || '');
+        // Special handling for email and address fields
+        if ((k === 'Email' || k === 'Address') && escapedValue.length > 30) {
+          return `<div class="k">${escapeHtml(k)}</div><div style="word-break: break-word; overflow-wrap: break-word;">${escapedValue}</div>`;
+        }
+        return `<div class="k">${escapeHtml(k)}</div><div>${escapedValue}</div>`;
+      }).join('');
+      
       overlay.style.display = 'flex';
     }
 
