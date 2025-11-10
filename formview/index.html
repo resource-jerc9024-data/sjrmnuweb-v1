@@ -270,50 +270,6 @@
       background: rgba(158, 240, 26, 0.2);
     }
 
-    .debug-panel {
-      margin-top: 20px;
-      padding: 16px;
-      background: rgba(139, 0, 0, 0.1);
-      border: 1px solid rgba(139, 0, 0, 0.3);
-      border-radius: 8px;
-      font-size: 12px;
-      color: #cbd5e1;
-    }
-
-    .debug-panel.hidden {
-      display: none;
-    }
-
-    .debug-log {
-      max-height: 200px;
-      overflow-y: auto;
-      background: #0b1220;
-      padding: 12px;
-      border-radius: 6px;
-      margin-top: 8px;
-      font-family: monospace;
-      font-size: 11px;
-      border: 1px solid #1f2937;
-    }
-
-    .debug-entry {
-      margin-bottom: 4px;
-      padding-bottom: 4px;
-      border-bottom: 1px solid #1f2937;
-    }
-
-    .debug-entry.error {
-      color: #ef4444;
-    }
-
-    .debug-entry.success {
-      color: #9ef01a;
-    }
-
-    .debug-entry.info {
-      color: #60a5fa;
-    }
-
     @media (max-width: 768px) {
       .view-card {
         padding: 24px;
@@ -351,24 +307,18 @@
           <label class="field">
             <span>Search By</span>
             <select name="search_by" id="searchBy">
-              <option value="form_number" selected>Form Number</option>
-              <option value="email">Email</option>
+              <option value="email" selected>Email</option>
               <option value="phone">Phone</option>
             </select>
           </label>
-          <label class="field" id="fieldFormNumber">
-            <span>Form Number</span>
-            <input type="text" name="form_number" placeholder="e.g. 000123" required />
-            <div class="error-message">Please enter a valid form number</div>
-          </label>
-          <label class="field hidden" id="fieldEmail">
+          <label class="field" id="fieldEmail">
             <span>Email</span>
-            <input type="email" name="email" placeholder="you@example.com" />
+            <input type="email" name="email" placeholder="you@example.com" required />
             <div class="error-message">Please enter a valid email address</div>
           </label>
           <label class="field hidden" id="fieldPhone">
             <span>Phone</span>
-            <input type="tel" name="phone" inputmode="numeric" placeholder="10-digit phone" pattern="[0-9]{10}" />
+            <input type="tel" name="phone" inputmode="numeric" placeholder="10-digit phone" pattern="[0-9]{10}" required />
             <div class="error-message">Please enter a valid 10-digit phone number</div>
           </label>
         </div>
@@ -558,12 +508,10 @@
     const result = document.getElementById('result');
     const kvPanel = document.getElementById('kvPanel');
     const searchBy = document.getElementById('searchBy');
-    const fieldFormNumber = document.getElementById('fieldFormNumber');
     const fieldEmail = document.getElementById('fieldEmail');
     const fieldPhone = document.getElementById('fieldPhone');
     const matches = document.getElementById('matches');
     const matchSelect = document.getElementById('matchSelect');
-    const inputForm = fieldFormNumber.querySelector('input');
     const inputEmail = fieldEmail.querySelector('input');
     const inputPhone = fieldPhone.querySelector('input');
 
@@ -609,24 +557,16 @@
       addDebugLog(`Search mode changed to: ${mode}`, 'info');
       
       // Reset all fields
-      fieldFormNumber.classList.add('hidden');
       fieldEmail.classList.add('hidden');
       fieldPhone.classList.add('hidden');
       
       // Show only the selected field
-      if (mode === 'form_number') {
-        fieldFormNumber.classList.remove('hidden');
-        inputForm.required = true;
-        inputEmail.required = false;
-        inputPhone.required = false;
-      } else if (mode === 'email') {
+      if (mode === 'email') {
         fieldEmail.classList.remove('hidden');
-        inputForm.required = false;
         inputEmail.required = true;
         inputPhone.required = false;
       } else if (mode === 'phone') {
         fieldPhone.classList.remove('hidden');
-        inputForm.required = false;
         inputEmail.required = false;
         inputPhone.required = true;
       }
@@ -645,13 +585,7 @@
       let queryValue = '';
       
       // Get the appropriate input value based on search type
-      if (mode === 'form_number') {
-        queryValue = inputForm.value.trim();
-        if (!queryValue) {
-          showToast('Please enter a form number.', 'error');
-          return;
-        }
-      } else if (mode === 'email') {
+      if (mode === 'email') {
         queryValue = inputEmail.value.trim().toLowerCase();
         if (!queryValue) {
           showToast('Please enter an email address.', 'error');
@@ -672,35 +606,7 @@
           throw new Error('Database not initialized');
         }
         
-        if (mode === 'form_number') {
-          // Pad with zeros to ensure 6-digit format
-          const id = String(queryValue).padStart(6, '0');
-          addDebugLog(`Looking up document ID: ${id}`, 'info');
-          
-          let snap = await getDoc(doc(db, 'records', id));
-          addDebugLog(`Document exists (padded): ${snap.exists()}`, 'info');
-
-          // If padded didn't exist, try raw ID as fallback
-          if (!snap.exists() && queryValue !== id) {
-            addDebugLog(`Trying raw ID fallback: ${queryValue}`, 'info');
-            snap = await getDoc(doc(db, 'records', String(queryValue)));
-            addDebugLog(`Document exists (raw): ${snap.exists()}`, 'info');
-            if (snap.exists()) {
-              currentRecord = { id: String(queryValue), ...snap.data() };
-            }
-          }
-
-          if (!snap.exists()) {
-            showToast('No record found for that form number.', 'error');
-            addDebugLog('No document found with padded or raw ID', 'error');
-            return;
-          }
-          
-          currentRecord = currentRecord || { id, ...snap.data() };
-          addDebugLog(`Found record: ${JSON.stringify(currentRecord).substring(0, 150)}...`, 'success');
-          showRecord(currentRecord);
-          
-        } else if (mode === 'email') {
+        if (mode === 'email') {
           addDebugLog('Querying by email...', 'info');
           const qy = query(collection(db, 'records'), where('email', '==', queryValue));
           const snaps = await getDocs(qy);
