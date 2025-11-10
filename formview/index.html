@@ -10,7 +10,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../handler/styles.css" />
   <link rel="icon" type="image/x-icon" href="../favicon.ico" />
+  
+  <!-- Load jsPDF via script tag -->
+  <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  
   <style>
+    /* Your existing CSS remains the same */
     body { 
       min-height: 100vh; 
       background: radial-gradient(1200px 600px at 20% -10%, #7c3aed22, transparent), 
@@ -448,10 +453,22 @@
           el = document.createElement('div');
           el.id = 'popup';
           el.className = 'toast';
-          el.innerHTML = '<span id="popupText"></span><button id="popupClose" class="btn ghost">Close</button>';
+          
+          const span = document.createElement('span');
+          span.id = 'popupText';
+          
+          const button = document.createElement('button');
+          button.id = 'popupClose';
+          button.className = 'btn ghost';
+          button.textContent = 'Close';
+          
+          button.addEventListener('click', () => { 
+            el.classList.remove('show','success','error'); 
+          });
+          
+          el.appendChild(span);
+          el.appendChild(button);
           document.body.appendChild(el);
-          const close = el.querySelector('#popupClose');
-          close.addEventListener('click', () => { el.classList.remove('show','success','error'); });
         }
         return el;
       }
@@ -482,7 +499,14 @@
       if (debugLogElement) {
         const entryElement = document.createElement('div');
         entryElement.className = `debug-entry ${type}`;
-        entryElement.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+        
+        const strong = document.createElement('strong');
+        strong.textContent = `[${timestamp}] `;
+        
+        const text = document.createTextNode(message);
+        
+        entryElement.appendChild(strong);
+        entryElement.appendChild(text);
         debugLogElement.appendChild(entryElement);
         debugLogElement.scrollTop = debugLogElement.scrollHeight;
       }
@@ -554,9 +578,9 @@
   </script>
   
   <script type="module">
+    // Import Firebase using static imports
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
     import { getFirestore, doc, getDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore-lite.js";
-    import { jsPDF } from "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.es.min.js";
 
     // DOM elements
     const form = document.getElementById('lookupForm');
@@ -792,49 +816,57 @@
       }
       
       // Multiple matches - show selection dropdown
-      matchSelect.innerHTML = currentMatches.map(r => 
-        `<option value="${r.id}">${r.id} - ${escapeHtml(r.full_name || 'Unnamed')}</option>`
-      ).join('');
+      matchSelect.innerHTML = '';
+      currentMatches.forEach(record => {
+        const option = document.createElement('option');
+        option.value = record.id;
+        option.textContent = `${record.id} - ${record.full_name || 'Unnamed'}`;
+        matchSelect.appendChild(option);
+      });
       
       matches.classList.remove('hidden');
       result.classList.add('hidden');
       addDebugLog(`Showing ${currentMatches.length} matches in dropdown`, 'success');
     }
 
-    function showRecord(r) {
-      addDebugLog(`Displaying record: ${r.id}`, 'info');
+    function showRecord(record) {
+      addDebugLog(`Displaying record: ${record.id}`, 'info');
       result.classList.remove('hidden');
       
+      // Clear existing content
+      kvPanel.innerHTML = '';
+      
       const entries = [
-        ['Form #', r.form_number || r.id],
-        ['Full Name', r.full_name],
-        ["Father's Name", r.father_name],
-        ["Mother's Name", r.mother_name],
-        ['Gender', r.gender],
-        ['Date of Birth', r.dob],
-        ['Institute', r.institute],
-        ['Class', r.class],
-        ['Section', r.section],
-        ['Phone', r.phone],
-        ['Email', r.email],
-        ['Address', r.address],
-        ['Landmark', r.landmark],
-        ['City', r.city],
-        ['Category', r.category]
+        ['Form #', record.form_number || record.id],
+        ['Full Name', record.full_name],
+        ["Father's Name", record.father_name],
+        ["Mother's Name", record.mother_name],
+        ['Gender', record.gender],
+        ['Date of Birth', record.dob],
+        ['Institute', record.institute],
+        ['Class', record.class],
+        ['Section', record.section],
+        ['Phone', record.phone],
+        ['Email', record.email],
+        ['Address', record.address],
+        ['Landmark', record.landmark],
+        ['City', record.city],
+        ['Category', record.category]
       ];
       
-      kvPanel.innerHTML = entries.map(([k, v]) => `
-        <div class="k">${escapeHtml(k)}</div>
-        <div>${escapeHtml(v || 'Not provided')}</div>
-      `).join('');
+      entries.forEach(([key, value]) => {
+        const keyDiv = document.createElement('div');
+        keyDiv.className = 'k';
+        keyDiv.textContent = key;
+        
+        const valueDiv = document.createElement('div');
+        valueDiv.textContent = value || 'Not provided';
+        
+        kvPanel.appendChild(keyDiv);
+        kvPanel.appendChild(valueDiv);
+      });
       
       addDebugLog('Record displayed successfully', 'success');
-    }
-
-    function escapeHtml(s = '') { 
-      return s.toString().replace(/[&<>\"]/g, c => 
-        ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c])
-      ); 
     }
 
     // Event listeners
@@ -882,7 +914,15 @@
       
       addDebugLog('Generating PDF...', 'info');
       
-      const r = currentRecord;
+      // Use jsPDF from global scope (loaded via script tag)
+      if (typeof window.jspdf === 'undefined') {
+        addDebugLog('jsPDF not loaded', 'error');
+        showToast('PDF library not loaded', 'error');
+        return;
+      }
+      
+      const { jsPDF } = window.jspdf;
+      const record = currentRecord;
       const doc = new jsPDF();
       let y = 14;
       
@@ -892,7 +932,7 @@
       y += 8;
       
       doc.setFontSize(12);
-      doc.text(`Form # ${r.form_number || r.id}`, 14, y);
+      doc.text(`Form # ${record.form_number || record.id}`, 14, y);
       y += 8;
       
       // Divider line
@@ -903,24 +943,24 @@
       // Form details
       doc.setFontSize(11);
       const pairs = [
-        ['Full Name', r.full_name],
-        ["Father's Name", r.father_name],
-        ["Mother's Name", r.mother_name],
-        ['Gender', r.gender],
-        ['Date of Birth', r.dob],
-        ['Institute', r.institute],
-        ['Class', r.class],
-        ['Section', r.section],
-        ['Phone', r.phone],
-        ['Email', r.email],
-        ['Address', r.address],
-        ['Landmark', r.landmark],
-        ['City', r.city],
-        ['Category', r.category]
+        ['Full Name', record.full_name],
+        ["Father's Name", record.father_name],
+        ["Mother's Name", record.mother_name],
+        ['Gender', record.gender],
+        ['Date of Birth', record.dob],
+        ['Institute', record.institute],
+        ['Class', record.class],
+        ['Section', record.section],
+        ['Phone', record.phone],
+        ['Email', record.email],
+        ['Address', record.address],
+        ['Landmark', record.landmark],
+        ['City', record.city],
+        ['Category', record.category]
       ];
       
-      for (const [k, v] of pairs) {
-        const text = `${k}: ${v || 'Not provided'}`;
+      for (const [key, value] of pairs) {
+        const text = `${key}: ${value || 'Not provided'}`;
         const lines = doc.splitTextToSize(text, 182);
         doc.text(lines, 14, y);
         y += 6 + (lines.length - 1) * 5;
@@ -933,7 +973,7 @@
       }
       
       // Save the PDF
-      const filename = `sjr_mun_form_${r.form_number || r.id}.pdf`;
+      const filename = `sjr_mun_form_${record.form_number || record.id}.pdf`;
       doc.save(filename);
       addDebugLog(`PDF downloaded: ${filename}`, 'success');
       showToast('PDF downloaded successfully!', 'success');
