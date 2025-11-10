@@ -95,7 +95,7 @@
                 <th class="nowrap">Form #</th>
                 <th>Name</th>
                 <th>Phone</th>
-                <th>Class</th>
+                <th>Class & Section</th>
                 <th>School</th>
                 <th>Category</th>
                 <th class="nowrap">Created</th>
@@ -391,12 +391,13 @@
       
       for (const r of rows) {
         const tr = document.createElement('tr');
+        const classSection = `${r.class || ''}${r.section ? ` - ${r.section}` : ''}`;
         
         tr.innerHTML = `
           <td class="nowrap">${r.id}</td>
           <td>${escapeHtml(r.full_name)}</td>
           <td>${escapeHtml(r.phone)}</td>
-          <td>${escapeHtml(r.class || '')}</td>
+          <td>${escapeHtml(classSection)}</td>
           <td>${escapeHtml(r.institute)}</td>
           <td>${escapeHtml(r.category)}</td>
           <td class="nowrap">${formatDate(r.created_at)}</td>
@@ -454,6 +455,7 @@
           ${detailRow('DOB', r.dob)}
           ${detailRow('Institute', r.institute)}
           ${detailRow('Class', r.class)}
+          ${detailRow('Section', r.section)}
           ${detailRow('Phone', r.phone)}
           ${detailRow('Email', r.email)}
           ${detailRow('Address', r.address)}
@@ -483,6 +485,7 @@
         ['DOB', r.dob],
         ['Institute', r.institute],
         ['Class', r.class],
+        ['Section', r.section],
         ['Phone', r.phone],
         ['Email', r.email],
         ['Address', r.address],
@@ -650,6 +653,7 @@
           dob: r.dob,
           institute: r.institute,
           class: r.class,
+          section: r.section,
           phone: r.phone,
           email: r.email,
           address: r.address,
