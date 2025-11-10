@@ -98,6 +98,16 @@
             <div class="error-message">Please select your class</div>
           </label>
 
+          <fieldset class="field field-inline" id="sectionField">
+            <legend>Section</legend>
+            <label class="radio"><input type="radio" name="section" value="A" required /> <span>A</span></label>
+            <label class="radio"><input type="radio" name="section" value="B" required /> <span>B</span></label>
+            <label class="radio"><input type="radio" name="section" value="C" required /> <span>C</span></label>
+            <label class="radio"><input type="radio" name="section" value="D" required /> <span>D</span></label>
+            <label class="radio"><input type="radio" name="section" value="E" required /> <span>E</span></label>
+            <div class="error-message">Please select your section</div>
+          </fieldset>
+
           <label class="field">
             <span>Phone No.</span>
             <input type="tel" name="phone" inputmode="numeric" placeholder="Enter your phone No" autocomplete="tel" required pattern="[0-9]{10}" />
@@ -512,6 +522,7 @@
               dob: data.dob || '',
               institute: data.institute || '',
               class: data.class || '',
+              section: data.section || '',
               phone: data.phone || '',
               email: data.email || '',
               address: data.address || '',
