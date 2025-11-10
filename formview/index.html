@@ -270,49 +270,7 @@
       background: rgba(158, 240, 26, 0.2);
     }
 
-    .debug-panel {
-      margin-top: 20px;
-      padding: 16px;
-      background: rgba(139, 0, 0, 0.1);
-      border: 1px solid rgba(139, 0, 0, 0.3);
-      border-radius: 8px;
-      font-size: 12px;
-      color: #cbd5e1;
-    }
-
-    .debug-panel.hidden {
-      display: none;
-    }
-
-    .debug-log {
-      max-height: 200px;
-      overflow-y: auto;
-      background: #0b1220;
-      padding: 12px;
-      border-radius: 6px;
-      margin-top: 8px;
-      font-family: monospace;
-      font-size: 11px;
-      border: 1px solid #1f2937;
-    }
-
-    .debug-entry {
-      margin-bottom: 4px;
-      padding-bottom: 4px;
-      border-bottom: 1px solid #1f2937;
-    }
-
-    .debug-entry.error {
-      color: #ef4444;
-    }
-
-    .debug-entry.success {
-      color: #9ef01a;
-    }
-
-    .debug-entry.info {
-      color: #60a5fa;
-    }
+    /* Removed debug-panel styles */
 
     @media (max-width: 768px) {
       .view-card {
@@ -374,20 +332,8 @@
         </div>
         <div class="actions">
           <button type="submit" class="btn primary">Search</button>
-          <button type="button" id="debugBtn" class="btn ghost" style="font-size: 12px;">
-            Debug Connection
-          </button>
         </div>
       </form>
-
-      <!-- Debug Panel -->
-      <div id="debugPanel" class="debug-panel hidden">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <strong>Debug Information</strong>
-          <button id="clearDebug" class="btn ghost" style="font-size: 10px; padding: 4px 8px;">Clear</button>
-        </div>
-        <div id="debugLog" class="debug-log"></div>
-      </div>
 
       <div id="matches" class="hidden" style="margin-top: 24px;">
         <label class="field">
@@ -485,98 +431,6 @@
     })();
   </script>
   
-  <script>
-    // Debug logging system
-    window.debugLog = [];
-    
-    function addDebugLog(message, type = 'info') {
-      const timestamp = new Date().toLocaleTimeString();
-      const logEntry = { timestamp, message, type };
-      window.debugLog.push(logEntry);
-      
-      // Update debug panel if visible
-      const debugLogElement = document.getElementById('debugLog');
-      if (debugLogElement) {
-        const entryElement = document.createElement('div');
-        entryElement.className = `debug-entry ${type}`;
-        
-        const strong = document.createElement('strong');
-        strong.textContent = `[${timestamp}] `;
-        
-        const text = document.createTextNode(message);
-        
-        entryElement.appendChild(strong);
-        entryElement.appendChild(text);
-        debugLogElement.appendChild(entryElement);
-        debugLogElement.scrollTop = debugLogElement.scrollHeight;
-      }
-      
-      console.log(`[${type.toUpperCase()}] ${message}`);
-    }
-
-    window.loadFirebaseConfig = async function loadFirebaseConfig(){
-      try {
-        addDebugLog('Loading Firebase configuration...', 'info');
-        
-        // Check if already loaded
-        if (window.FIREBASE_API_KEY && window.FIREBASE_PROJECT_ID) {
-          addDebugLog('Firebase config already loaded', 'success');
-          return true;
-        }
-        
-        let cfg = null;
-        // Try API first when running on http/https
-        if (location.protocol === 'http:' || location.protocol === 'https:') {
-          try {
-            addDebugLog('Fetching config from /api/env', 'info');
-            const res = await fetch('/api/env');
-            if (!res.ok) {
-              const errorText = await res.text();
-              throw new Error(`HTTP ${res.status}: ${errorText}`);
-            }
-            cfg = await res.json();
-            addDebugLog('Received config from API', 'success');
-            addDebugLog(`Project ID: ${cfg.FIREBASE_PROJECT_ID}`, 'info');
-          } catch (apiErr) {
-            addDebugLog(`API config load failed: ${apiErr.message}`, 'error');
-          }
-        } else {
-          addDebugLog('Running from file:// or unknown protocol; skipping API fetch', 'info');
-        }
-
-        // Fallback to global window.__FIREBASE_CONFIG__ if present
-        if (!cfg && window.__FIREBASE_CONFIG__) {
-          addDebugLog('Using window.__FIREBASE_CONFIG__ fallback', 'info');
-          cfg = window.__FIREBASE_CONFIG__;
-        }
-
-        if (!cfg) {
-          throw new Error('Firebase config not found. Provide /api/env or window.__FIREBASE_CONFIG__.');
-        }
-        
-        if (!cfg.FIREBASE_API_KEY || !cfg.FIREBASE_PROJECT_ID) {
-          throw new Error('Missing required Firebase configuration (API_KEY or PROJECT_ID)');
-        }
-        
-        // Set all config values
-        window.FIREBASE_API_KEY = cfg.FIREBASE_API_KEY;
-        window.FIREBASE_AUTH_DOMAIN = cfg.FIREBASE_AUTH_DOMAIN || `${cfg.FIREBASE_PROJECT_ID}.firebaseapp.com`;
-        window.FIREBASE_PROJECT_ID = cfg.FIREBASE_PROJECT_ID;
-        window.FIREBASE_STORAGE_BUCKET = cfg.FIREBASE_STORAGE_BUCKET || `${cfg.FIREBASE_PROJECT_ID}.appspot.com`;
-        window.FIREBASE_MESSAGING_SENDER_ID = cfg.FIREBASE_MESSAGING_SENDER_ID;
-        window.FIREBASE_APP_ID = cfg.FIREBASE_APP_ID;
-        
-        addDebugLog('Firebase configuration loaded successfully', 'success');
-        return true;
-        
-      } catch (err) {
-        addDebugLog(`Failed to load Firebase config: ${err.message}`, 'error');
-        showToast('Configuration error: ' + err.message, 'error');
-        return false;
-      }
-    }
-  </script>
-  
   <script type="module">
     // Import Firebase using static imports
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
@@ -595,9 +449,6 @@
     const inputForm = fieldFormNumber.querySelector('input');
     const inputEmail = fieldEmail.querySelector('input');
     const inputPhone = fieldPhone.querySelector('input');
-    const debugBtn = document.getElementById('debugBtn');
-    const debugPanel = document.getElementById('debugPanel');
-    const clearDebug = document.getElementById('clearDebug');
 
     let currentRecord = null;
     let currentMatches = [];
@@ -606,8 +457,6 @@
     // Initialize Firebase
     async function initializeFirebase() {
       try {
-        addDebugLog('Initializing Firebase...', 'info');
-        
         const ok = await window.loadFirebaseConfig();
         if (!ok) {
           throw new Error('Firebase configuration failed to load');
@@ -622,66 +471,21 @@
           appId: window.FIREBASE_APP_ID,
         };
         
-        addDebugLog('Firebase config validated', 'success');
         const app = initializeApp(cfg);
         db = getFirestore(app);
-        addDebugLog('Firebase Firestore initialized successfully', 'success');
+        console.log('Firebase Firestore initialized successfully');
         
         return true;
       } catch (error) {
-        addDebugLog(`Firebase initialization failed: ${error.message}`, 'error');
+        console.error('Firebase initialization failed:', error);
         showToast('Firebase initialization failed: ' + error.message, 'error');
         return false;
-      }
-    }
-
-    // Debug connection test
-    async function debugFirebaseConnection() {
-      addDebugLog('Testing Firebase connection...', 'info');
-      
-      if (!db) {
-        addDebugLog('Firebase not initialized', 'error');
-        showToast('Firebase not initialized', 'error');
-        return;
-      }
-      
-      try {
-        // Test with a sample document
-        const testDocId = '000001';
-        addDebugLog(`Testing document: records/${testDocId}`, 'info');
-        
-        const snap = await getDoc(doc(db, 'records', testDocId));
-        
-        if (snap.exists()) {
-          const data = snap.data();
-          addDebugLog(`✓ Document exists with data: ${JSON.stringify(data).substring(0, 100)}...`, 'success');
-          addDebugLog(`Available fields: ${Object.keys(data).join(', ')}`, 'info');
-        } else {
-          addDebugLog('✗ Document does not exist', 'error');
-          addDebugLog('Please check if the document exists in Firestore', 'info');
-        }
-        
-        // Test collection query
-        addDebugLog('Testing collection query...', 'info');
-        const q = query(collection(db, 'records'));
-        const querySnap = await getDocs(q);
-        addDebugLog(`Total documents in collection: ${querySnap.docs.length}`, 'info');
-        
-        if (querySnap.docs.length > 0) {
-          querySnap.docs.slice(0, 3).forEach((doc, index) => {
-            addDebugLog(`Sample doc ${index + 1}: ${doc.id}`, 'info');
-          });
-        }
-        
-      } catch (error) {
-        addDebugLog(`Connection test failed: ${error.message}`, 'error');
       }
     }
 
     // Form input management
     function updateInputs() {
       const mode = searchBy.value;
-      addDebugLog(`Search mode changed to: ${mode}`, 'info');
       
       // Reset all fields
       fieldFormNumber.classList.add('hidden');
@@ -740,8 +544,6 @@
         }
       }
       
-      addDebugLog(`Searching by ${mode} for: "${queryValue}"`, 'info');
-      
       try {
         if (!db) {
           throw new Error('Database not initialized');
@@ -750,16 +552,12 @@
         if (mode === 'form_number') {
           // Pad with zeros to ensure 6-digit format
           const id = String(queryValue).padStart(6, '0');
-          addDebugLog(`Looking up document ID: ${id}`, 'info');
           
           let snap = await getDoc(doc(db, 'records', id));
-          addDebugLog(`Document exists (padded): ${snap.exists()}`, 'info');
 
           // If padded didn't exist, try raw ID as fallback
           if (!snap.exists() && queryValue !== id) {
-            addDebugLog(`Trying raw ID fallback: ${queryValue}`, 'info');
             snap = await getDoc(doc(db, 'records', String(queryValue)));
-            addDebugLog(`Document exists (raw): ${snap.exists()}`, 'info');
             if (snap.exists()) {
               currentRecord = { id: String(queryValue), ...snap.data() };
             }
@@ -767,37 +565,30 @@
 
           if (!snap.exists()) {
             showToast('No record found for that form number.', 'error');
-            addDebugLog('No document found with padded or raw ID', 'error');
             return;
           }
           
           currentRecord = currentRecord || { id, ...snap.data() };
-          addDebugLog(`Found record: ${JSON.stringify(currentRecord).substring(0, 150)}...`, 'success');
           showRecord(currentRecord);
           
         } else if (mode === 'email') {
-          addDebugLog('Querying by email...', 'info');
           const qy = query(collection(db, 'records'), where('email', '==', queryValue));
           const snaps = await getDocs(qy);
-          addDebugLog(`Found ${snaps.docs.length} matches for email`, 'info');
           handleMatches(snaps);
           
         } else if (mode === 'phone') {
-          addDebugLog('Querying by phone...', 'info');
           const qy = query(collection(db, 'records'), where('phone', '==', queryValue));
           const snaps = await getDocs(qy);
-          addDebugLog(`Found ${snaps.docs.length} matches for phone`, 'info');
           handleMatches(snaps);
         }
       } catch (err) {
-        addDebugLog(`Search error: ${err.message}`, 'error');
+        console.error('Search error:', err);
         showToast('Failed to search records: ' + err.message, 'error');
       }
     }
 
     function handleMatches(snaps) {
       currentMatches = snaps.docs.map(d => ({ id: d.id, ...d.data() }));
-      addDebugLog(`Processing ${currentMatches.length} matches`, 'info');
       
       if (!currentMatches.length) {
         matches.classList.add('hidden');
@@ -809,7 +600,6 @@
       if (currentMatches.length === 1) {
         // If only one match, show it directly
         currentRecord = currentMatches[0];
-        addDebugLog(`Single match found: ${currentRecord.id}`, 'success');
         showRecord(currentRecord);
         matches.classList.add('hidden');
         return;
@@ -826,11 +616,9 @@
       
       matches.classList.remove('hidden');
       result.classList.add('hidden');
-      addDebugLog(`Showing ${currentMatches.length} matches in dropdown`, 'success');
     }
 
     function showRecord(record) {
-      addDebugLog(`Displaying record: ${record.id}`, 'info');
       result.classList.remove('hidden');
       
       // Clear existing content
@@ -865,8 +653,6 @@
         kvPanel.appendChild(keyDiv);
         kvPanel.appendChild(valueDiv);
       });
-      
-      addDebugLog('Record displayed successfully', 'success');
     }
 
     // Event listeners
@@ -874,9 +660,6 @@
       searchBy.addEventListener('change', updateInputs);
       form.addEventListener('submit', handleFormSubmit);
       matchSelect.addEventListener('change', handleMatchSelect);
-      debugBtn.addEventListener('click', handleDebugClick);
-      clearDebug.addEventListener('click', handleClearDebug);
-      
       document.getElementById('downloadPdfBtn').addEventListener('click', handleDownloadPdf);
     }
 
@@ -886,24 +669,8 @@
       
       if (rec) {
         currentRecord = rec;
-        addDebugLog(`Selected record: ${id}`, 'info');
         showRecord(currentRecord);
       }
-    }
-
-    function handleDebugClick() {
-      debugPanel.classList.toggle('hidden');
-      if (!debugPanel.classList.contains('hidden')) {
-        debugFirebaseConnection();
-      }
-    }
-
-    function handleClearDebug() {
-      const debugLogElement = document.getElementById('debugLog');
-      if (debugLogElement) {
-        debugLogElement.innerHTML = '';
-      }
-      window.debugLog = [];
     }
 
     function handleDownloadPdf() {
@@ -912,11 +679,8 @@
         return;
       }
       
-      addDebugLog('Generating PDF...', 'info');
-      
       // Use jsPDF from global scope (loaded via script tag)
       if (typeof window.jspdf === 'undefined') {
-        addDebugLog('jsPDF not loaded', 'error');
         showToast('PDF library not loaded', 'error');
         return;
       }
@@ -975,14 +739,11 @@
       // Save the PDF
       const filename = `sjr_mun_form_${record.form_number || record.id}.pdf`;
       doc.save(filename);
-      addDebugLog(`PDF downloaded: ${filename}`, 'success');
       showToast('PDF downloaded successfully!', 'success');
     }
 
     // Initialize the application
     async function init() {
-      addDebugLog('Initializing application...', 'info');
-      
       // Initialize form state
       updateInputs();
       setupEventListeners();
@@ -990,10 +751,7 @@
       // Initialize Firebase
       const firebaseReady = await initializeFirebase();
       if (firebaseReady) {
-        addDebugLog('Application ready', 'success');
         showToast('Application loaded successfully!', 'success');
-      } else {
-        addDebugLog('Application initialization failed', 'error');
       }
     }
 
