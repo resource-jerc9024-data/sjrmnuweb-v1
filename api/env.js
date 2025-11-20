@@ -1,32 +1,13 @@
 // Vercel Serverless Function to expose public Firebase config
 module.exports = (req, res) => {
-  // Layer 1: Origin validation - only allow your specific domains
-  const allowedOrigins = [
-    'https://sjrmnu.vercel.app',
-    'https://sjrmnuweb-v1.vercel.app',
-  ];
-  
-  const origin = req.headers.origin;
-  const isAllowed = allowedOrigins.includes(origin);
-  
-  // Set CORS headers only for allowed origins
-  if (isAllowed) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  } else {
-    res.setHeader('Access-Control-Allow-Origin', 'none');
-  }
-  
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   
   // Handle preflight
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
-  }
-  
-  // Layer 2: Block requests from non-allowed origins
-  if (!isAllowed) {
-    return res.status(403).json({ error: 'Forbidden' });
   }
   
   res.setHeader('Content-Type', 'application/json');
