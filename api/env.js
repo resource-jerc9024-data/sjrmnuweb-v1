@@ -1,15 +1,21 @@
+// Vercel Serverless Function to expose public Firebase config
 module.exports = (req, res) => {
-  // Layer 1: Origin validation
-  const allowedOrigins = ['http://sjrmnu.vercel.app', 'http://sjrmnuweb-v1.vercel.app'];
+  // Layer 1: Origin validation - only allow your specific domains
+  const allowedOrigins = [
+    'https://sjrmnu.vercel.app',
+    'https://sjrmnuweb-v1.vercel.app',
+  ];
+  
   const origin = req.headers.origin;
   const isAllowed = allowedOrigins.includes(origin);
   
-  if (!isAllowed) {
-    return res.status(403).json({ error: 'Forbidden' });
+  // Set CORS headers only for allowed origins
+  if (isAllowed) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', 'none');
   }
-
-  // Set CORS headers for allowed origin
-  res.setHeader('Access-Control-Allow-Origin', origin);
+  
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   
@@ -18,11 +24,15 @@ module.exports = (req, res) => {
     return res.status(200).end();
   }
   
+  // Layer 2: Block requests from non-allowed origins
+  if (!isAllowed) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Cache-Control', 'no-store, max-age=0');
   
   try {
-    // Return ALL Firebase config fields your application expects
     res.status(200).json({
       FIREBASE_API_KEY: process.env.FIREBASE_API_KEY || '',
       FIREBASE_AUTH_DOMAIN: process.env.FIREBASE_AUTH_DOMAIN || '',
