@@ -1,6 +1,6 @@
 module.exports = (req, res) => {
   // Layer 1: Origin validation
-  const allowedOrigins = ['https://sjrmnu.vercel.app', 'https://sjrmnuweb-v1.vercel.app'];
+  const allowedOrigins = ['http://sjrmnu.vercel.app', 'http://sjrmnuweb-v1.vercel.app'];
   const origin = req.headers.origin;
   const isAllowed = allowedOrigins.includes(origin);
   
