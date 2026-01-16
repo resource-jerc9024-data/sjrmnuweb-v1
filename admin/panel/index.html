@@ -1,3 +1,5 @@
+[file name]: admin.html
+[file content begin]
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -97,7 +99,7 @@
                 <th>Phone</th>
                 <th>Class</th>
                 <th>School</th>
-                <th>Category</th>
+                <th>Department</th>
                 <th class="nowrap">Created</th>
                 <th class="nowrap">Actions</th>
               </tr>
@@ -398,7 +400,7 @@
           <td>${escapeHtml(r.phone)}</td>
           <td>${escapeHtml(r.class || '')}</td>
           <td>${escapeHtml(r.institute)}</td>
-          <td>${escapeHtml(r.category)}</td>
+          <td>${escapeHtml(r.department)}</td>
           <td class="nowrap">${formatDate(r.created_at)}</td>
           <td class="nowrap">
             <button class="btn ghost" data-view="${r.id}">View</button>
@@ -433,6 +435,26 @@
       return ts || '';
     }
 
+    function recordToLines(r) {
+      return [
+        ['Form #', r.id],
+        ['Full Name', r.full_name],
+        ["Father's Name", r.father_name],
+        ["Mother's Name", r.mother_name],
+        ['Gender', r.gender],
+        ['DOB', r.dob],
+        ['Institute', r.institute],
+        ['Class', r.class],
+        ['Phone', r.phone],
+        ['Email', r.email],
+        ['Address', r.address],
+        ['Landmark', r.landmark],
+        ['City', r.city],
+        ['Department', r.department],
+        ['Created', formatDate(r.created_at)],
+      ];
+    }
+
     // Show details panel
     function showDetails(r) {
       if (!r) return;
@@ -459,7 +481,7 @@
           ${detailRow('Address', r.address)}
           ${detailRow('Landmark', r.landmark)}
           ${detailRow('City', r.city)}
-          ${detailRow('Category', r.category)}
+          ${detailRow('Department', r.department)}
           ${detailRow('Created', formatDate(r.created_at))}
         </div>`;
       document.getElementById('detailPdfBtn').onclick = () => downloadRecordPdf(r);
@@ -471,26 +493,6 @@
 
     function detailRow(label, value) {
       return `<div><div class="muted">${escapeHtml(label)}</div><div>${escapeHtml(value||'')}</div></div>`;
-    }
-
-    function recordToLines(r) {
-      return [
-        ['Form #', r.id],
-        ['Full Name', r.full_name],
-        ["Father's Name", r.father_name],
-        ["Mother's Name", r.mother_name],
-        ['Gender', r.gender],
-        ['DOB', r.dob],
-        ['Institute', r.institute],
-        ['Class', r.class],
-        ['Phone', r.phone],
-        ['Email', r.email],
-        ['Address', r.address],
-        ['Landmark', r.landmark],
-        ['City', r.city],
-        ['Category', r.category],
-        ['Created', formatDate(r.created_at)],
-      ];
     }
 
     // Modal functions
@@ -655,7 +657,7 @@
           address: r.address,
           landmark: r.landmark,
           city: r.city,
-          category: r.category,
+          department: r.department,
           created_at: formatDate(r.created_at)
         }));
         
@@ -677,3 +679,4 @@
   </script>
 </body>
 </html>
+[file content end]
