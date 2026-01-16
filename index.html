@@ -127,21 +127,24 @@
           </label>
 
           <label class="field">
-            <span>Category</span>
-            <select name="category" autocomplete="off" required>
+            <span>Department</span>
+            <select name="department" autocomplete="off" required>
               <option value="" selected disabled>Select</option>
-              <option>Public Speaker</option>
-              <option>Debat</option>
-              <option>Drafting</option>
+              <option>Delegates affairs</option>
+              <option>Logistics</option>
+              <option>Hospitality</option>
+              <option>Sponsorship</option>
+              <option>Outreach</option>
+              <option>Social media</option>
+              <option>Designing</option>
+              <option>Researcher</option>
+              <option>Academia Ambassador</option>
+              <option>Organising team</option>
               <option>Editor</option>
-              <option>Phographer</option>
-              <option>Videorapher</option>
-              <option>Info Gatherer</option>
-              <option>Web Devloper</option>
-              <option>Graphic Designer</option>
-              <option>Pr team</option>
+              <option>Tech department (coding & web developer)</option>
+              <option>Graphic designer</option>
             </select>
-            <div class="error-message">Please select a category</div>
+            <div class="error-message">Please select a department</div>
           </label>
         </div>
 
@@ -518,7 +521,7 @@
               address: data.address || '',
               landmark: data.landmark || '',
               city: data.city || '',
-              category: data.category || '',
+              department: data.department || '',
               created_at: serverTimestamp()
             };
 
