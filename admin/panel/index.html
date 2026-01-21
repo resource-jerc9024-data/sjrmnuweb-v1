@@ -29,7 +29,7 @@
     .nowrap { white-space:nowrap; }
     .details { padding:16px; background:#0b1220; border:1px solid #1f2937; border-radius:12px; margin-top:14px; }
     :root{ --neo:#9ef01a; --neo-dark:#9ef01a; }
-    .btn { border-radius:10px; transition:.2s transform, .2s box-shadow, .2s background-color, .2s border-color, .2s color; }
+    .btn { border-radius:10px; transition:.2s transform, .2s box-shadow, .2s background-color, .2s border-color, .2s color; font-size:12px; padding:6px 10px; min-height:32px; display:inline-flex; align-items:center; justify-content:center; }
     .btn.primary, .btn { background:linear-gradient(135deg, var(--primary, var(--neo)), var(--primary-strong, #b9ff2b)); border:none; color:#0b1220; font-weight:600; box-shadow:0 10px 24px rgba(158,240,26,.18); }
     .btn.primary:hover, .btn:hover { transform: translateY(-1px); box-shadow:0 14px 32px rgba(158,240,26,.28); }
     .btn.ghost { background:transparent; border:1px solid var(--primary, var(--neo)); color:var(--primary, var(--neo)); }
@@ -64,7 +64,35 @@
     .expanded-item { display: flex; flex-direction: column; }
     .expanded-label { color: #94a3b8; font-size: 12px; margin-bottom: 4px; }
     .expanded-value { color: #e5e7eb; font-size: 14px; }
-    .expanded-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .expanded-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    
+    /* Action buttons container for mobile */
+    .action-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+    
+    /* Responsive table adjustments */
+    @media (max-width: 768px) {
+      .table thead th, .table tbody td { padding: 8px 6px; font-size: 13px; }
+      .btn { padding: 4px 8px; font-size: 11px; min-height: 28px; }
+      .action-buttons { gap: 4px; }
+      .table-wrap { margin: 0 -10px; border-radius: 0; border-left: none; border-right: none; }
+      .toolbar { gap: 8px; }
+      .searchbar, .filter-select { min-width: 120px; }
+      .content { padding: 0 10px; }
+    }
+    
+    @media (max-width: 480px) {
+      .table thead th { font-size: 10px; padding: 6px 4px; }
+      .table tbody td { font-size: 12px; padding: 6px 4px; }
+      .btn { padding: 3px 6px; font-size: 10px; min-height: 26px; }
+      .btn .icon { margin-right: 2px; }
+      .action-buttons { flex-direction: column; gap: 3px; }
+      .expanded-grid { grid-template-columns: 1fr; }
+      .expanded-actions { flex-direction: column; }
+      .expanded-actions .btn { width: 100%; }
+    }
+    
+    /* Icon for buttons (optional) */
+    .btn .icon { display: inline-block; margin-right: 4px; font-size: 10px; }
   </style>
 </head>
 <body class="auth-pending">
@@ -463,9 +491,11 @@
           <td>${escapeHtml(r.institute)}</td>
           <td>${escapeHtml(r.department)}</td>
           <td class="nowrap">${formatDate(r.created_at)}</td>
-          <td class="nowrap">
-            <button class="btn ghost" data-view="${r.id}">View</button>
-            <button class="btn" data-pdf="${r.id}">PDF</button>
+          <td>
+            <div class="action-buttons">
+              <button class="btn ghost" data-view="${r.id}">View</button>
+              <button class="btn" data-pdf="${r.id}">PDF</button>
+            </div>
           </td>`;
         tbody.appendChild(tr);
         
@@ -771,7 +801,7 @@
         pdfLoading.classList.remove('show');
         showToast('Error exporting all records as PDF: ' + error.message, 'error');
       }
-    });
+    }
 
     // Excel export
     document.getElementById('exportXlsxBtn').addEventListener('click', async () => {
