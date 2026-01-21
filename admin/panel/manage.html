@@ -119,7 +119,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-    import { getFirestore, collection, getDocs, setDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+    import { getFirestore, collection, getDocs, setDoc, doc, deleteDoc, Timestamp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDQ_ox-jKUM6ALhWrIymVrGRrDnBAb7bHE",
@@ -341,8 +341,22 @@
       return { originalId: id, id, full_name, father_name, mother_name, gender, phone, institute, departments, createdAtMs, createdRaw };
     }
 
+    function coerceCreated(value){
+      try {
+        if (!value) return undefined;
+        if (typeof value.toDate === 'function') return value; // Firestore Timestamp
+        if (typeof value === 'object' && typeof value.seconds === 'number') {
+          return new Timestamp(value.seconds, value.nanoseconds || 0);
+        }
+        const d = new Date(value);
+        if (!isNaN(d.getTime())) return d; // Date accepted by Firestore
+      } catch {}
+      return undefined;
+    }
+
     function denormalizeRecord(r) {
       const department = (r.departments || []).join(', ');
+      const created = coerceCreated(r.createdRaw);
       return {
         full_name: r.full_name || '',
         father_name: r.father_name || '',
@@ -351,7 +365,7 @@
         phone: r.phone || '',
         institute: r.institute || '',
         department,
-        ...(r.createdRaw ? { created_at: r.createdRaw } : {})
+        ...(created ? { created_at: created } : {})
       };
     }
 
