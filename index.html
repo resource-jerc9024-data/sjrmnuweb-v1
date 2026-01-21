@@ -143,6 +143,7 @@
               <option>Editor</option>
               <option>Tech department (coding & web developer)</option>
               <option>Graphic designer</option>
+              <option>Marketing Team</option> <!-- Added Marketing Team -->
             </select>
             <div class="error-message">Please select a department</div>
           </label>
@@ -194,6 +195,27 @@
   
   <!-- Form Validation & Toast functionality -->
   <script>
+    // Function to format name fields with proper capitalization
+    function formatNameField(input) {
+      if (!input || !input.value) return;
+      
+      let value = input.value.trim();
+      
+      // Split by spaces and capitalize each word
+      value = value.split(/\s+/)
+        .map(word => {
+          // Handle empty words
+          if (!word) return '';
+          
+          // Capitalize first letter, lowercase the rest
+          return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+        })
+        .join(' ');
+      
+      // Update the input value
+      input.value = value;
+    }
+
     // Form validation utility
     (function(){
       function ensureToast(){
@@ -290,6 +312,11 @@
           field.addEventListener('blur', () => {
             if (field.hasAttribute('required')) {
               validateField(field);
+            }
+            
+            // Auto-format name fields on blur
+            if (field.name === 'full_name' || field.name === 'father_name' || field.name === 'mother_name') {
+              formatNameField(field);
             }
           });
           
@@ -462,6 +489,15 @@
         // Form submission handler
         form?.addEventListener('submit', async (e) => {
           e.preventDefault();
+          
+          // Auto-format name fields before validation
+          const nameFields = ['full_name', 'father_name', 'mother_name'];
+          nameFields.forEach(fieldName => {
+            const input = form.querySelector(`[name="${fieldName}"]`);
+            if (input) {
+              formatNameField(input);
+            }
+          });
           
           // Validate form before submission
           if (!window.validateForm(form)) {
