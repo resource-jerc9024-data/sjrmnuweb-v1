@@ -24,6 +24,13 @@
     .pill { display:inline-block; padding:4px 8px; border:1px solid #1f2937; border-radius:999px; margin:2px; background:#0b1220; font-size:12px; }
     .muted { color:#94a3b8; font-size:12px; }
     .danger { background:#7f1d1d; border-color:#7f1d1d; }
+    /* Simple modal for editing departments */
+    .overlay { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.5); z-index:100; padding:20px; }
+    .overlay.show { display:flex; }
+    .modal { width:100%; max-width:560px; background:#0b1220; border:1px solid #1f2937; border-radius:14px; box-shadow:0 30px 80px rgba(0,0,0,.6); }
+    .modal-head { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid #1f2937; }
+    .modal-body { padding:14px 16px; }
+    .modal-actions { display:flex; gap:8px; justify-content:flex-end; padding:12px 16px; border-top:1px solid #1f2937; }
   </style>
 </head>
 <body class="auth-pending">
@@ -32,6 +39,27 @@
       <a href="./test.html" class="btn ghost">Back</a>
       <strong>Manage Records (JSON)</strong>
     </div>
+
+  <!-- Edit Departments Modal -->
+  <div id="deptOverlay" class="overlay" aria-hidden="true">
+    <div class="modal">
+      <div class="modal-head">
+        <strong>Edit Department List</strong>
+        <button id="deptCloseBtn" class="btn ghost">Close</button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <label>Departments</label>
+          <textarea id="deptText" placeholder="One department per line"></textarea>
+        </div>
+        <div class="muted" style="margin-top:6px;">Updates affect the editor options only. Existing selections are preserved where names match.</div>
+      </div>
+      <div class="modal-actions">
+        <button id="deptResetBtn" class="btn ghost">Reset</button>
+        <button id="deptSaveBtn" class="btn">Save</button>
+      </div>
+    </div>
+  </div>
     <div>
       <button id="logoutBtn" class="btn ghost">Logout</button>
     </div>
@@ -45,6 +73,7 @@
         <button id="importBtn" class="btn ghost">Upload JSON</button>
         <button id="applyJsonBtn" class="btn">Apply JSON to Editor</button>
         <button id="saveChangesBtn" class="btn">Save Changes to Firestore</button>
+        <button id="editDeptListBtn" class="btn ghost">Edit Department List</button>
       </div>
       <div class="grid">
         <div class="row">
@@ -58,6 +87,8 @@
       <div class="toolbar">
         <button id="renumberBtn" class="btn">Renumber Sequential</button>
         <button id="renumberByCreatedBtn" class="btn">Renumber by Created</button>
+        <button id="normalizeNamesBtn" class="btn ghost">Normalize Names</button>
+        <button id="normalizeParentsBtn" class="btn ghost">Normalize Parent Names</button>
         <input id="startNum" class="inline-input" type="number" value="1" min="1" style="max-width:120px" />
         <input id="prefix" class="inline-input" type="text" placeholder="Prefix (optional)" style="max-width:180px" />
         <input id="pad" class="inline-input" type="number" value="0" min="0" style="max-width:100px" />
@@ -97,7 +128,7 @@
       measurementId: "G-6D259WD4H6"
     };
 
-    const DEPARTMENTS = [
+    let DEPARTMENTS = [
       'Delegates Affairs','Logistics','Hospitality','Sponsorship','Outreach','Social Media','Designing','Researcher','Academia Ambassador','Organising Team','Editor','Tech Department','Graphic Designer','Marketing Team'
     ];
 
@@ -117,10 +148,18 @@
     const jsonArea = document.getElementById('jsonArea');
     const applyJsonBtn = document.getElementById('applyJsonBtn');
     const saveChangesBtn = document.getElementById('saveChangesBtn');
+    const editDeptListBtn = document.getElementById('editDeptListBtn');
+    const deptOverlay = document.getElementById('deptOverlay');
+    const deptText = document.getElementById('deptText');
+    const deptCloseBtn = document.getElementById('deptCloseBtn');
+    const deptSaveBtn = document.getElementById('deptSaveBtn');
+    const deptResetBtn = document.getElementById('deptResetBtn');
 
     const tableBody = document.querySelector('#editTable tbody');
     const renumberBtn = document.getElementById('renumberBtn');
     const renumberByCreatedBtn = document.getElementById('renumberByCreatedBtn');
+    const normalizeNamesBtn = document.getElementById('normalizeNamesBtn');
+    const normalizeParentsBtn = document.getElementById('normalizeParentsBtn');
     const startNum = document.getElementById('startNum');
     const prefix = document.getElementById('prefix');
     const pad = document.getElementById('pad');
@@ -158,6 +197,35 @@
       }
     });
 
+    // --- Edit Department List Modal Logic ---
+    function openDeptModal(){
+      deptText.value = (DEPARTMENTS || []).join('\n');
+      deptOverlay.classList.add('show');
+    }
+    function closeDeptModal(){ deptOverlay.classList.remove('show'); }
+    function uniqueList(arr){
+      const seen = new Set();
+      const out = [];
+      arr.forEach(x => { const k = x.toLowerCase(); if (!seen.has(k)) { seen.add(k); out.push(x); } });
+      return out;
+    }
+    editDeptListBtn.addEventListener('click', openDeptModal);
+    deptCloseBtn.addEventListener('click', closeDeptModal);
+    deptResetBtn.addEventListener('click', () => { deptText.value = (defaultDeptList()).join('\n'); });
+    deptSaveBtn.addEventListener('click', () => {
+      const lines = (deptText.value || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      const normalized = uniqueList(lines.map(titleCaseName));
+      if (normalized.length === 0) { alert('Please enter at least one department'); return; }
+      DEPARTMENTS = normalized;
+      // Re-render editor to rebuild department options, preserve selections where possible
+      renderEditor();
+      closeDeptModal();
+    });
+
+    function defaultDeptList(){
+      return ['Delegates Affairs','Logistics','Hospitality','Sponsorship','Outreach','Social Media','Designing','Researcher','Academia Ambassador','Organising Team','Editor','Tech Department','Graphic Designer','Marketing Team'];
+    }
+
     renumberBtn.addEventListener('click', () => {
       const start = parseInt(startNum.value || '1', 10) || 1;
       const p = prefix.value || '';
@@ -182,6 +250,28 @@
         return { ...r, id: `${p}${num}` };
       });
       editorRows = updated;
+      renderEditor();
+    });
+
+    function titleCaseName(s=''){
+      return (s || '')
+        .trim()
+        .split(/\s+/)
+        .map(w => w ? (w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()) : w)
+        .join(' ');
+    }
+
+    normalizeNamesBtn.addEventListener('click', () => {
+      editorRows = editorRows.map(r => ({ ...r, full_name: titleCaseName(r.full_name) }));
+      renderEditor();
+    });
+
+    normalizeParentsBtn.addEventListener('click', () => {
+      editorRows = editorRows.map(r => ({ 
+        ...r, 
+        father_name: titleCaseName(r.father_name), 
+        mother_name: titleCaseName(r.mother_name) 
+      }));
       renderEditor();
     });
 
@@ -214,6 +304,8 @@
     function normalizeRecord(r) {
       const id = String(r.id || '').trim();
       const full_name = r.full_name || '';
+      const father_name = r.father_name || '';
+      const mother_name = r.mother_name || '';
       const gender = r.gender || '';
       const phone = r.phone || '';
       const institute = r.institute || '';
@@ -221,13 +313,15 @@
       const departments = splitDepartments(departmentStr);
       const createdRaw = r.created_at ?? null;
       const createdAtMs = toMs(r.created_at);
-      return { originalId: id, id, full_name, gender, phone, institute, departments, createdAtMs, createdRaw };
+      return { originalId: id, id, full_name, father_name, mother_name, gender, phone, institute, departments, createdAtMs, createdRaw };
     }
 
     function denormalizeRecord(r) {
       const department = (r.departments || []).join(', ');
       return {
         full_name: r.full_name || '',
+        father_name: r.father_name || '',
+        mother_name: r.mother_name || '',
         gender: r.gender || '',
         phone: r.phone || '',
         institute: r.institute || '',
