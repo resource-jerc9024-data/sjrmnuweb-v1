@@ -233,13 +233,21 @@
           <input id="searchInput" class="searchbar" type="text" placeholder="Search by form number, name, or phone" />
           <select id="filterSelect" class="filter-select">
             <option value="">All Departments</option>
-            <option value="IT">IT</option>
-            <option value="Marketing">Marketing</option>
-            <option value="Finance">Finance</option>
+            <!-- Departments will be populated from the registration form data -->
+            <option value="Delegates affairs">Delegates affairs</option>
             <option value="Logistics">Logistics</option>
-            <option value="PR">PR</option>
-            <option value="Design">Design</option>
-            <!-- More options will be populated dynamically -->
+            <option value="Hospitality">Hospitality</option>
+            <option value="Sponsorship">Sponsorship</option>
+            <option value="Outreach">Outreach</option>
+            <option value="Social media">Social media</option>
+            <option value="Designing">Designing</option>
+            <option value="Researcher">Researcher</option>
+            <option value="Academia Ambassador">Academia Ambassador</option>
+            <option value="Organising team">Organising team</option>
+            <option value="Editor">Editor</option>
+            <option value="Tech department (coding & web developer)">Tech department</option>
+            <option value="Graphic designer">Graphic designer</option>
+            <option value="Marketing Team">Marketing Team</option>
           </select>
           <select id="sortSelect" class="sort-select">
             <option value="">Sort By</option>
@@ -249,6 +257,7 @@
             <option value="name_desc">Name Z-A</option>
             <option value="gender">Gender</option>
             <option value="class">Class</option>
+            <option value="department">Department A-Z</option>
           </select>
           <button id="refreshBtn" class="btn ghost">Refresh</button>
           <button id="exportXlsxBtn" class="btn ghost">Export Excel</button>
@@ -331,6 +340,24 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+
+    // Department list from registration form
+    const DEPARTMENTS = [
+      'Delegates affairs',
+      'Logistics',
+      'Hospitality',
+      'Sponsorship',
+      'Outreach',
+      'Social media',
+      'Designing',
+      'Researcher',
+      'Academia Ambassador',
+      'Organising team',
+      'Editor',
+      'Tech department (coding & web developer)',
+      'Graphic designer',
+      'Marketing Team'
+    ];
 
     // Check if jsPDF is loaded
     function checkJsPdfLoaded() {
@@ -448,8 +475,28 @@
       // User is authenticated
       document.body.classList.remove('auth-pending');
       console.log('[Auth] User authenticated:', user.email);
+      
+      // Initialize department filter dropdown
+      initializeDepartmentFilter();
+      
       loadRecords();
       setupRealtimeListener();
+    }
+
+    // Initialize department filter dropdown with all available departments
+    function initializeDepartmentFilter() {
+      // Clear existing options except "All Departments"
+      while (filterSelect.options.length > 1) {
+        filterSelect.remove(1);
+      }
+      
+      // Add all departments from the predefined list
+      DEPARTMENTS.forEach(department => {
+        const option = document.createElement('option');
+        option.value = department;
+        option.textContent = department;
+        filterSelect.appendChild(option);
+      });
     }
 
     // Handle authentication errors
@@ -516,7 +563,10 @@
     searchInput.addEventListener('input', () => renderRows(filterAndSortRecords()));
 
     // Filter functionality
-    filterSelect.addEventListener('change', () => renderRows(filterAndSortRecords()));
+    filterSelect.addEventListener('change', () => {
+      console.log(`Filtering by department: ${filterSelect.value}`);
+      renderRows(filterAndSortRecords());
+    });
 
     // Sort functionality
     sortSelect.addEventListener('change', () => renderRows(filterAndSortRecords()));
@@ -532,6 +582,8 @@
       const searchTerm = (searchInput.value || '').toLowerCase().trim();
       const filterValue = filterSelect.value;
       
+      console.log(`Filtering - Search: "${searchTerm}", Department: "${filterValue}"`);
+      
       return allRecords.filter(r => {
         // Search filter
         const matchesSearch = !searchTerm || 
@@ -541,7 +593,13 @@
           (r.institute || '').toLowerCase().includes(searchTerm);
         
         // Department filter
-        const matchesFilter = !filterValue || (r.department || '') === filterValue;
+        let matchesFilter = true;
+        if (filterValue) {
+          // Check if the record's department contains the filter value
+          // Since departments can have multiple values separated by commas
+          const recordDepartments = (r.department || '').split(',').map(d => d.trim());
+          matchesFilter = recordDepartments.some(dept => dept === filterValue);
+        }
         
         return matchesSearch && matchesFilter;
       });
@@ -604,31 +662,16 @@
             return (a.class || '').localeCompare(b.class || '');
           });
           
+        case 'department':
+          return records.sort((a, b) => {
+            const deptA = (a.department || '').split(',')[0].trim(); // Take first department for sorting
+            const deptB = (b.department || '').split(',')[0].trim();
+            return deptA.localeCompare(deptB) || (a.full_name || '').localeCompare(b.full_name || '');
+          });
+          
         default:
           return records;
       }
-    }
-
-    // Update filter dropdown with unique departments
-    function updateFilterOptions(records) {
-      const departments = new Set();
-      records.forEach(r => {
-        if (r.department) {
-          departments.add(r.department);
-        }
-      });
-      
-      // Get current options except "All Departments"
-      const currentOptions = Array.from(filterSelect.options).slice(1).map(opt => opt.value);
-      const newDepartments = Array.from(departments).filter(dept => !currentOptions.includes(dept));
-      
-      // Add new departments
-      newDepartments.forEach(dept => {
-        const option = document.createElement('option');
-        option.value = dept;
-        option.textContent = dept;
-        filterSelect.appendChild(option);
-      });
     }
 
     // Load records from Firestore
@@ -643,13 +686,8 @@
         allRecords = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         console.log(`[Admin] Loaded ${allRecords.length} records`);
         
-        // Update filter options
-        updateFilterOptions(allRecords);
-        
         renderRows(filterAndSortRecords());
         
-        // REMOVED: Don't show the "Loaded x records" toast anymore
-        // Only show errors if something goes wrong
       } catch (err) {
         console.error('[Admin] Failed to load records:', err);
         tbody.innerHTML = '<tr><td colspan="9">Failed to load records. Please refresh.</td></tr>';
