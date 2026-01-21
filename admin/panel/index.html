@@ -65,6 +65,146 @@
     .expanded-label { color: #94a3b8; font-size: 12px; margin-bottom: 4px; }
     .expanded-value { color: #e5e7eb; font-size: 14px; }
     .expanded-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+    /* Mobile Responsive Styles */
+    @media (max-width: 768px) {
+      .topbar {
+        padding: 12px 16px;
+        flex-wrap: wrap;
+      }
+      
+      .brand .logo {
+        width: 40px;
+        height: 40px;
+      }
+      
+      .brand .title {
+        font-size: 14px;
+      }
+      
+      .content {
+        margin: 16px auto;
+        padding: 0 16px;
+      }
+      
+      .card {
+        padding: 12px;
+      }
+      
+      .toolbar {
+        gap: 8px;
+        margin: 8px 0;
+      }
+      
+      .searchbar {
+        min-width: 100%;
+        order: 1;
+      }
+      
+      .filter-select, .sort-select {
+        flex: 1;
+        min-width: 120px;
+      }
+      
+      .btn {
+        padding: 8px 12px;
+        font-size: 14px;
+      }
+      
+      .table thead th {
+        padding: 8px 10px;
+        font-size: 11px;
+      }
+      
+      .table tbody td {
+        padding: 8px 10px;
+        font-size: 13px;
+      }
+      
+      /* Hide some columns on mobile */
+      .table thead th:nth-child(4), /* Gender */
+      .table thead th:nth-child(5), /* Class */
+      .table thead th:nth-child(8) { /* Created */
+        display: none;
+      }
+      
+      .table tbody td:nth-child(4), /* Gender */
+      .table tbody td:nth-child(5), /* Class */
+      .table tbody td:nth-child(8) { /* Created */
+        display: none;
+      }
+      
+      .expanded-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .expanded-actions {
+        flex-wrap: wrap;
+      }
+      
+      .expanded-actions .btn {
+        flex: 1;
+        min-width: 120px;
+      }
+      
+      .modal {
+        margin: 0 16px;
+      }
+      
+      .modal-body {
+        padding: 12px;
+      }
+      
+      .kv {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      
+      .kv .k {
+        font-size: 12px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .topbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .brand {
+        width: 100%;
+        justify-content: space-between;
+      }
+      
+      .btn.ghost {
+        padding: 6px 10px;
+        font-size: 13px;
+      }
+      
+      .filter-select, .sort-select {
+        min-width: 100px;
+      }
+      
+      /* Hide Institution column on very small screens */
+      .table thead th:nth-child(6) { /* Institution */
+        display: none;
+      }
+      
+      .table tbody td:nth-child(6) { /* Institution */
+        display: none;
+      }
+    }
+
+    /* Sort select styling */
+    .sort-select {
+      background:#0b1220;
+      border:1px solid #1f2937;
+      color:#e5e7eb;
+      border-radius:10px;
+      padding:10px 12px;
+      outline:none;
+      min-width:140px;
+    }
   </style>
 </head>
 <body class="auth-pending">
@@ -100,6 +240,15 @@
             <option value="PR">PR</option>
             <option value="Design">Design</option>
             <!-- More options will be populated dynamically -->
+          </select>
+          <select id="sortSelect" class="sort-select">
+            <option value="">Sort By</option>
+            <option value="created_desc">Newest First</option>
+            <option value="created_asc">Oldest First</option>
+            <option value="name_asc">Name A-Z</option>
+            <option value="name_desc">Name Z-A</option>
+            <option value="gender">Gender</option>
+            <option value="class">Class</option>
           </select>
           <button id="refreshBtn" class="btn ghost">Refresh</button>
           <button id="exportXlsxBtn" class="btn ghost">Export Excel</button>
@@ -263,6 +412,7 @@
     const details = document.getElementById('detailsPanel');
     const searchInput = document.getElementById('searchInput');
     const filterSelect = document.getElementById('filterSelect');
+    const sortSelect = document.getElementById('sortSelect');
     const logoutBtn = document.getElementById('logoutBtn');
     const pdfLoading = document.getElementById('pdfLoading');
 
@@ -363,10 +513,19 @@
     document.getElementById('refreshBtn').addEventListener('click', loadRecords);
 
     // Search functionality
-    searchInput.addEventListener('input', () => renderRows(filterRecords()));
+    searchInput.addEventListener('input', () => renderRows(filterAndSortRecords()));
 
     // Filter functionality
-    filterSelect.addEventListener('change', () => renderRows(filterRecords()));
+    filterSelect.addEventListener('change', () => renderRows(filterAndSortRecords()));
+
+    // Sort functionality
+    sortSelect.addEventListener('change', () => renderRows(filterAndSortRecords()));
+
+    // Filter and sort records
+    function filterAndSortRecords() {
+      let filtered = filterRecords();
+      return sortRecords(filtered);
+    }
 
     // Filter records based on search and filter
     function filterRecords() {
@@ -386,6 +545,68 @@
         
         return matchesSearch && matchesFilter;
       });
+    }
+
+    // Sort records based on selected option
+    function sortRecords(records) {
+      const sortValue = sortSelect.value;
+      
+      switch(sortValue) {
+        case 'created_desc':
+          return records.sort((a, b) => {
+            const dateA = a.created_at?.toDate?.() || new Date(a.created_at);
+            const dateB = b.created_at?.toDate?.() || new Date(b.created_at);
+            return dateB - dateA;
+          });
+          
+        case 'created_asc':
+          return records.sort((a, b) => {
+            const dateA = a.created_at?.toDate?.() || new Date(a.created_at);
+            const dateB = b.created_at?.toDate?.() || new Date(b.created_at);
+            return dateA - dateB;
+          });
+          
+        case 'name_asc':
+          return records.sort((a, b) => 
+            (a.full_name || '').localeCompare(b.full_name || '')
+          );
+          
+        case 'name_desc':
+          return records.sort((a, b) => 
+            (b.full_name || '').localeCompare(a.full_name || '')
+          );
+          
+        case 'gender':
+          return records.sort((a, b) => {
+            const genderOrder = { 'Male': 1, 'Female': 2, 'Other': 3 };
+            const orderA = genderOrder[a.gender] || 4;
+            const orderB = genderOrder[b.gender] || 4;
+            return orderA - orderB || (a.full_name || '').localeCompare(b.full_name || '');
+          });
+          
+        case 'class':
+          return records.sort((a, b) => {
+            // Extract numeric part from class for better sorting
+            const extractNumber = (str) => {
+              if (!str) return 0;
+              const match = str.toString().match(/\d+/);
+              return match ? parseInt(match[0]) : 0;
+            };
+            
+            const numA = extractNumber(a.class);
+            const numB = extractNumber(b.class);
+            
+            if (numA !== numB) {
+              return numA - numB;
+            }
+            
+            // If same numeric value, sort alphabetically
+            return (a.class || '').localeCompare(b.class || '');
+          });
+          
+        default:
+          return records;
+      }
     }
 
     // Update filter dropdown with unique departments
@@ -425,12 +646,10 @@
         // Update filter options
         updateFilterOptions(allRecords);
         
-        renderRows(filterRecords());
+        renderRows(filterAndSortRecords());
         
-        // Only show success toast on manual refresh or initial load
-        if (!searchInput.value && !filterSelect.value) {
-          showToast(`Loaded ${allRecords.length} records`, 'success');
-        }
+        // REMOVED: Don't show the "Loaded x records" toast anymore
+        // Only show errors if something goes wrong
       } catch (err) {
         console.error('[Admin] Failed to load records:', err);
         tbody.innerHTML = '<tr><td colspan="9">Failed to load records. Please refresh.</td></tr>';
@@ -530,7 +749,7 @@
         }
         
         // Re-render rows to show/hide expanded content
-        renderRows(filterRecords());
+        renderRows(filterAndSortRecords());
       }));
 
       tbody.querySelectorAll('[data-pdf]').forEach(btn => btn.addEventListener('click', (e) => {
@@ -554,7 +773,7 @@
 
       tbody.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', (e) => {
         expandedRowId = null;
-        renderRows(filterRecords());
+        renderRows(filterAndSortRecords());
       }));
     }
 
