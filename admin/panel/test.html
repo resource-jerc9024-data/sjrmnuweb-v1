@@ -205,6 +205,16 @@
       outline:none;
       min-width:140px;
     }
+    /* Department popover filter */
+    .multi-filter { position: relative; }
+    .multi-filter .btn-toggle { background:#0b1220; border:1px solid #1f2937; color:#e5e7eb; border-radius:10px; padding:10px 12px; cursor:pointer; }
+    .multi-filter .popover { position:absolute; top:110%; left:0; background:#0b1220; border:1px solid #1f2937; border-radius:12px; box-shadow:0 20px 50px rgba(0,0,0,.45); width:280px; max-height:300px; display:none; z-index:20; }
+    .multi-filter .popover.show { display:block; }
+    .multi-filter .pop-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 12px; border-bottom:1px solid #1f2937; }
+    .multi-filter .pop-body { padding:10px 12px; max-height:220px; overflow:auto; display:grid; grid-template-columns:1fr; gap:8px; }
+    .multi-filter .pop-actions { display:flex; justify-content:flex-end; gap:8px; padding:10px 12px; border-top:1px solid #1f2937; }
+    .multi-filter .chk { display:flex; align-items:center; gap:8px; }
+    .multi-filter .muted { font-size:12px; color:#94a3b8; }
   </style>
 </head>
 <body class="auth-pending">
@@ -231,7 +241,22 @@
       <div class="card">
         <div class="toolbar">
           <input id="searchInput" class="searchbar" type="text" placeholder="Search by form number, name, or phone" />
-          <select id="filterSelect" class="filter-select" multiple>
+          <div class="multi-filter" id="deptFilterWrap">
+            <button type="button" id="deptToggle" class="btn-toggle">Departments (All)</button>
+            <div class="popover" id="deptPopover" aria-hidden="true">
+              <div class="pop-head">
+                <strong>Departments</strong>
+                <button type="button" id="deptClear" class="btn ghost" style="padding:6px 8px;">Clear</button>
+              </div>
+              <div class="pop-body" id="deptList">
+                <!-- Checkboxes will be injected -->
+              </div>
+              <div class="pop-actions">
+                <button type="button" id="deptApply" class="btn">Apply</button>
+              </div>
+            </div>
+          </div>
+          <select id="filterSelect" class="filter-select" multiple style="display:none">
             <!-- Populated dynamically -->
           </select>
           <select id="genderFilter" class="filter-select">
@@ -246,7 +271,6 @@
             <option value="created_asc">Oldest First</option>
             <option value="name_asc">Name A-Z</option>
             <option value="name_desc">Name Z-A</option>
-            <option value="gender">Gender</option>
             <option value="class">Class</option>
             <option value="department">Department A-Z</option>
           </select>
@@ -470,6 +494,7 @@
       
       // Initialize department filter dropdown
       initializeDepartmentFilter();
+      setupDepartmentCheckboxUI();
       
       loadRecords();
       setupRealtimeListener();
@@ -489,6 +514,77 @@
         option.textContent = department;
         filterSelect.appendChild(option);
       });
+    }
+
+    // Checkbox-based UI for departments (syncs with hidden select)
+    function setupDepartmentCheckboxUI() {
+      const wrap = document.getElementById('deptFilterWrap');
+      const toggle = document.getElementById('deptToggle');
+      const pop = document.getElementById('deptPopover');
+      const list = document.getElementById('deptList');
+      const clearBtn = document.getElementById('deptClear');
+      const applyBtn = document.getElementById('deptApply');
+
+      // Build checkbox list
+      list.innerHTML = '';
+      DEPARTMENTS.forEach(dep => {
+        const id = 'dep_' + dep.toLowerCase().replace(/[^a-z0-9]+/g,'_');
+        const row = document.createElement('label');
+        row.className = 'chk';
+        row.innerHTML = `<input type="checkbox" value="${dep}" id="${id}"><span>${dep}</span>`;
+        list.appendChild(row);
+      });
+
+      // Sync from select -> checkboxes
+      function syncFromSelect() {
+        const selected = new Set(Array.from(filterSelect.selectedOptions).map(o => o.value));
+        list.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+          cb.checked = selected.has(cb.value);
+        });
+        updateButtonLabel();
+      }
+
+      // Sync from checkboxes -> select
+      function syncToSelect() {
+        const picked = new Set(Array.from(list.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value));
+        Array.from(filterSelect.options).forEach(opt => { opt.selected = picked.has(opt.value); });
+        updateButtonLabel();
+      }
+
+      function updateButtonLabel() {
+        const count = Array.from(filterSelect.selectedOptions).length;
+        toggle.textContent = count ? `Departments (${count})` : 'Departments (All)';
+      }
+
+      // Open/close logic
+      toggle.addEventListener('click', () => {
+        pop.classList.toggle('show');
+        if (pop.classList.contains('show')) syncFromSelect();
+      });
+      document.addEventListener('click', (e) => {
+        if (!wrap.contains(e.target)) pop.classList.remove('show');
+      });
+
+      // Clear and apply
+      clearBtn.addEventListener('click', () => {
+        list.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+        syncToSelect();
+        renderRows(filterAndSortRecords());
+      });
+      applyBtn.addEventListener('click', () => {
+        syncToSelect();
+        pop.classList.remove('show');
+        renderRows(filterAndSortRecords());
+      });
+
+      // Auto-apply on change
+      list.addEventListener('change', () => {
+        syncToSelect();
+        renderRows(filterAndSortRecords());
+      });
+
+      // Initial sync
+      syncFromSelect();
     }
 
     // Handle authentication errors
