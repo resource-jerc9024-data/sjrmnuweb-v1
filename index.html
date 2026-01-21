@@ -16,6 +16,7 @@
     .toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
     .toast.success{border-color:rgba(158,240,26,.5)}
     .toast.error{border-color:#7f1d1d}
+    .toast.warning{border-color:rgba(245,158,11,.5)}
     .field.error input, .field.error select, .field.field-inline.error { border-color: #ef4444 !important; box-shadow: 0 0 0 2px rgba(239,68,68,0.2) !important; }
     .error-message { color: #ef4444; font-size: 12px; margin-top: 4px; display: none; }
     .field.error .error-message { display: block; }
@@ -271,6 +272,23 @@
         grid-column: span 1;
       }
     }
+    
+    /* Loading spinner */
+    .loading-spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: var(--primary);
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
@@ -503,19 +521,19 @@
     // Department management functions
     function initializeDepartmentCheckboxes() {
       const departments = [
-        'Delegates Affairs',
+        'Delegates affairs',
         'Logistics',
         'Hospitality',
         'Sponsorship',
         'Outreach',
-        'Social Media',
+        'Social media',
         'Designing',
         'Researcher',
         'Academia Ambassador',
-        'Organising Team',
+        'Organising team',
         'Editor',
-        'Tech Department',
-        'Graphic Designer',
+        'Tech department (coding & web developer)',
+        'Graphic designer',
         'Marketing Team'
       ];
       
@@ -633,7 +651,7 @@
           el.innerHTML = '<span id="popupText"></span><button id="popupClose" class="btn ghost">Close</button>';
           document.body.appendChild(el);
           const close = el.querySelector('#popupClose');
-          close.addEventListener('click', () => { el.classList.remove('show','success','error'); });
+          close.addEventListener('click', () => { el.classList.remove('show','success','error','warning'); });
         }
         return el;
       }
@@ -642,14 +660,18 @@
         const el = ensureToast();
         const text = el.querySelector('#popupText');
         if (text) text.textContent = msg;
-        el.classList.remove('success','error');
+        el.classList.remove('success','error','warning');
         el.classList.add('show', kind);
         clearTimeout(el.__hideT);
-        el.__hideT = setTimeout(() => el.classList.remove('show','success','error'), 6000);
+        el.__hideT = setTimeout(() => el.classList.remove('show','success','error','warning'), 6000);
       };
       
       window.showSiteError = function(msg){
         window.showToast(msg || 'An error occurred', 'error');
+      };
+      
+      window.showWarning = function(msg){
+        window.showToast(msg, 'warning');
       };
 
       // Form validation functions
@@ -841,7 +863,7 @@
   <!-- Main Firebase application - USING FIRESTORE LITE (NO EVAL) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, getDoc, updateDoc, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore-lite.js";
+    import { getFirestore, doc, setDoc, getDoc, updateDoc, serverTimestamp, increment, query, where, getDocs, collection } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore-lite.js";
 
     (async () => {
       try {
@@ -894,17 +916,66 @@
           const text = el.querySelector('#popupText');
           const close = el.querySelector('#popupClose');
           let hideT;
-          close.addEventListener('click', () => { el.classList.remove('show','success','error'); });
+          close.addEventListener('click', () => { el.classList.remove('show','success','error','warning'); });
           return {
             show(msg, kind='success'){
               if (text) text.textContent = msg;
-              el.classList.remove('success','error');
+              el.classList.remove('success','error','warning');
               el.classList.add('show', kind);
               clearTimeout(hideT);
-              hideT = setTimeout(() => el.classList.remove('show','success','error'), 6000);
+              hideT = setTimeout(() => el.classList.remove('show','success','error','warning'), 6000);
             }
           };
         })();
+
+        // Function to check if email or phone already exists
+        async function checkDuplicateContact(email, phone) {
+          try {
+            console.log('Checking for duplicate contact:', { email, phone });
+            
+            // Query for existing email
+            const emailQuery = query(collection(db, 'records'), where('email', '==', email.toLowerCase().trim()));
+            const emailSnapshot = await getDocs(emailQuery);
+            
+            // Query for existing phone
+            const phoneQuery = query(collection(db, 'records'), where('phone', '==', phone.trim()));
+            const phoneSnapshot = await getDocs(phoneQuery);
+            
+            const results = {
+              emailExists: !emailSnapshot.empty,
+              phoneExists: !phoneSnapshot.empty,
+              existingRecords: []
+            };
+            
+            if (results.emailExists) {
+              emailSnapshot.forEach(doc => {
+                results.existingRecords.push({
+                  id: doc.id,
+                  ...doc.data()
+                });
+              });
+            }
+            
+            if (results.phoneExists) {
+              phoneSnapshot.forEach(doc => {
+                // Avoid duplicates if same record has both matching email and phone
+                if (!results.existingRecords.some(record => record.id === doc.id)) {
+                  results.existingRecords.push({
+                    id: doc.id,
+                    ...doc.data()
+                  });
+                }
+              });
+            }
+            
+            console.log('Duplicate check results:', results);
+            return results;
+            
+          } catch (error) {
+            console.error('Error checking duplicate contact:', error);
+            throw error;
+          }
+        }
 
         // Form submission handler
         form?.addEventListener('submit', async (e) => {
@@ -938,13 +1009,40 @@
 
           // Disable submit button to prevent multiple submissions
           submitBtn.disabled = true;
-          submitBtn.textContent = 'Submitting...';
+          const originalText = submitBtn.textContent;
+          submitBtn.innerHTML = '<span class="loading-spinner"></span> Checking...';
 
           const fd = new FormData(form);
           const data = Object.fromEntries(fd.entries());
 
           try {
-            console.log('Starting form submission...', data);
+            console.log('Starting duplicate check...', data);
+            
+            // Check for duplicate email or phone
+            const duplicateCheck = await checkDuplicateContact(data.email, data.phone);
+            
+            if (duplicateCheck.emailExists || duplicateCheck.phoneExists) {
+              let message = '';
+              const existingRecord = duplicateCheck.existingRecords[0];
+              
+              if (duplicateCheck.emailExists && duplicateCheck.phoneExists) {
+                message = `This email and phone number are already registered. Form Number: ${existingRecord.form_number}`;
+              } else if (duplicateCheck.emailExists) {
+                message = `This email is already registered. Form Number: ${existingRecord.form_number}`;
+              } else if (duplicateCheck.phoneExists) {
+                message = `This phone number is already registered. Form Number: ${existingRecord.form_number}`;
+              }
+              
+              window.showWarning(message + '. If you need to update, please contact admin.');
+              submitBtn.disabled = false;
+              submitBtn.textContent = originalText;
+              return;
+            }
+            
+            console.log('No duplicates found, proceeding with submission...');
+            
+            // Update button text for submission phase
+            submitBtn.innerHTML = '<span class="loading-spinner"></span> Submitting...';
             
             // Firestore Lite: use atomic increment instead of transaction
             const counterRef = doc(db, 'meta', 'counters');
@@ -978,8 +1076,8 @@
               dob: data.dob || '',
               institute: data.institute || '',
               class: data.class || '',
-              phone: data.phone || '',
-              email: data.email || '',
+              phone: data.phone.trim() || '',
+              email: data.email.toLowerCase().trim() || '',
               address: data.address || '',
               landmark: data.landmark || '',
               city: data.city || '',
@@ -991,7 +1089,7 @@
             await setDoc(doc(db, 'records', formNumber), record);
             console.log('Record saved successfully');
 
-            toast.show(`Form submitted successfully! Your Form Number is ${formNumber}. Save it to view/download later in Form View.`, 'success');
+            toast.show(`Registration successful! Your Form Number is ${formNumber}. Save it for future reference.`, 'success');
             form.reset();
             
             // Reset department checkboxes
@@ -1006,11 +1104,16 @@
             
           } catch (err) {
             console.error('Form submission error:', err);
-            toast.show('Could not submit the form. Please try again.', 'error');
+            
+            if (err.message && err.message.includes('already exists') || err.message.includes('duplicate')) {
+              window.showWarning('This email or phone number is already registered. Please use different contact information.');
+            } else {
+              toast.show('Could not complete registration. Please try again.', 'error');
+            }
           } finally {
             // Re-enable submit button
             submitBtn.disabled = false;
-            submitBtn.textContent = 'Submit';
+            submitBtn.textContent = originalText;
           }
         });
 
