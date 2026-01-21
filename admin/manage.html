@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Manage Records (JSON) - SJR MUN</title>
+  <link rel="stylesheet" href="../../handler/styles.css" />
+  <link rel="icon" type="image/x-icon" href="../../favicon.ico" />
+  <style>
+    body { min-height:100vh; background: radial-gradient(1200px 600px at 20% -10%, #7c3aed22, transparent), radial-gradient(1000px 500px at 120% 10%, #06b6d422, transparent), linear-gradient(180deg, #0b1020, #0f172a); color:#e5e7eb; }
+    .topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 20px; backdrop-filter: blur(8px); background:rgba(15,23,42,.45); border-bottom:1px solid #1f2937; position:sticky; top:0; z-index:10; }
+    .content { max-width:1200px; width:100%; margin:24px auto; padding:0 20px; }
+    .card { background:rgba(17, 24, 39, 0.7); border:1px solid #1f2937; border-radius:16px; box-shadow: 0 20px 60px rgba(0,0,0,.45); padding:18px; }
+    .toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+    .btn { border-radius:10px; }
+    .grid { display:grid; grid-template-columns: 1fr; gap:12px; }
+    .row { display:grid; grid-template-columns: 120px 1fr; gap:8px; align-items:center; }
+    textarea { width:100%; min-height:200px; background:#0b1220; color:#e5e7eb; border:1px solid #1f2937; border-radius:12px; padding:12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    table { width:100%; border-collapse:separate; border-spacing:0; }
+    th, td { border-bottom:1px solid #0f1a2e; padding:8px 10px; font-size:14px; }
+    th { background:#0b1220; position:sticky; top:0; z-index:1; }
+    .table-wrap { max-height:50vh; overflow:auto; border:1px solid #1f2937; border-radius:12px; }
+    .inline-input { width:100%; background:#0b1220; color:#e5e7eb; border:1px solid #1f2937; border-radius:8px; padding:6px 8px; }
+    .pill { display:inline-block; padding:4px 8px; border:1px solid #1f2937; border-radius:999px; margin:2px; background:#0b1220; font-size:12px; }
+    .muted { color:#94a3b8; font-size:12px; }
+    .danger { background:#7f1d1d; border-color:#7f1d1d; }
+    /* Simple modal for editing departments */
+    .overlay { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.5); z-index:100; padding:20px; }
+    .overlay.show { display:flex; }
+    .modal { width:100%; max-width:560px; background:#0b1220; border:1px solid #1f2937; border-radius:14px; box-shadow:0 30px 80px rgba(0,0,0,.6); }
+    .modal-head { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid #1f2937; }
+    .modal-body { padding:14px 16px; }
+    .modal-actions { display:flex; gap:8px; justify-content:flex-end; padding:12px 16px; border-top:1px solid #1f2937; }
+  </style>
+</head>
+<body class="auth-pending">
+  <div class="topbar">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <a href="./test.html" class="btn ghost">Back</a>
+      <strong>Manage Records (JSON)</strong>
+    </div>
+
+  <!-- Edit Departments Modal -->
+  <div id="deptOverlay" class="overlay" aria-hidden="true">
+    <div class="modal">
+      <div class="modal-head">
+        <strong>Edit Department List</strong>
+        <button id="deptCloseBtn" class="btn ghost">Close</button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <label>Departments</label>
+          <textarea id="deptText" placeholder="One department per line"></textarea>
+        </div>
+        <div class="muted" style="margin-top:6px;">Updates affect the editor options only. Existing selections are preserved where names match.</div>
+      </div>
+      <div class="modal-actions">
+        <button id="deptResetBtn" class="btn ghost">Reset</button>
+        <button id="deptSaveBtn" class="btn">Save</button>
+      </div>
+    </div>
+  </div>
+    <div>
+      <button id="logoutBtn" class="btn ghost">Logout</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="card">
+      <div class="toolbar">
+        <button id="exportBtn" class="btn">Export JSON</button>
+        <input id="fileInput" type="file" accept="application/json" style="display:none" />
+        <button id="importBtn" class="btn ghost">Upload JSON</button>
+        <button id="applyJsonBtn" class="btn">Apply JSON to Editor</button>
+        <button id="saveChangesBtn" class="btn">Save Changes to Firestore</button>
+        <button id="editDeptListBtn" class="btn ghost">Edit Department List</button>
+      </div>
+      <div class="grid">
+        <div class="row">
+          <label>JSON</label>
+          <textarea id="jsonArea" placeholder="Exported records JSON will appear here"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <div class="toolbar">
+        <button id="renumberBtn" class="btn">Renumber Sequential</button>
+        <button id="renumberByCreatedBtn" class="btn">Renumber by Created</button>
+        <button id="normalizeNamesBtn" class="btn ghost">Normalize Names</button>
+        <button id="normalizeParentsBtn" class="btn ghost">Normalize Parent Names</button>
+        <input id="startNum" class="inline-input" type="number" value="1" min="1" style="max-width:120px" />
+        <input id="prefix" class="inline-input" type="text" placeholder="Prefix (optional)" style="max-width:180px" />
+        <input id="pad" class="inline-input" type="number" value="0" min="0" style="max-width:100px" />
+        <span class="muted">Use pad for zero-padding, e.g., 3 -> 001</span>
+      </div>
+      <div class="table-wrap">
+        <table id="editTable">
+          <thead>
+            <tr>
+              <th style="width:120px;">Form # (ID)</th>
+              <th>Name</th>
+              <th>Gender</th>
+              <th>Phone</th>
+              <th>Institute</th>
+              <th>Departments</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="muted" style="margin-top:8px;">Departments are stored as a comma-separated list. Use the editor to assign multiple departments to a single person.</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+    import { getFirestore, collection, getDocs, setDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDQ_ox-jKUM6ALhWrIymVrGRrDnBAb7bHE",
+      authDomain: "sjrmnuweb-3cac4.firebaseapp.com",
+      projectId: "sjrmnuweb-3cac4",
+      storageBucket: "sjrmnuweb-3cac4.firebasestorage.app",
+      messagingSenderId: "402828314003",
+      appId: "1:402828314003:web:eb48510e51d5f439b19466",
+      measurementId: "G-6D259WD4H6"
+    };
+
+    let DEPARTMENTS = [
+      'Delegates Affairs','Logistics','Hospitality','Sponsorship','Outreach','Social Media','Designing','Researcher','Academia Ambassador','Organising Team','Editor','Tech Department','Graphic Designer','Marketing Team'
+    ];
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const logoutBtn = document.getElementById('logoutBtn');
+    logoutBtn.addEventListener('click', async () => { await signOut(auth); window.location.href = './'; });
+
+    await setPersistence(auth, browserLocalPersistence);
+    onAuthStateChanged(auth, (user) => { if (!user) window.location.href = './'; else document.body.classList.remove('auth-pending'); });
+
+    const exportBtn = document.getElementById('exportBtn');
+    const importBtn = document.getElementById('importBtn');
+    const fileInput = document.getElementById('fileInput');
+    const jsonArea = document.getElementById('jsonArea');
+    const applyJsonBtn = document.getElementById('applyJsonBtn');
+    const saveChangesBtn = document.getElementById('saveChangesBtn');
+    const editDeptListBtn = document.getElementById('editDeptListBtn');
+    const deptOverlay = document.getElementById('deptOverlay');
+    const deptText = document.getElementById('deptText');
+    const deptCloseBtn = document.getElementById('deptCloseBtn');
+    const deptSaveBtn = document.getElementById('deptSaveBtn');
+    const deptResetBtn = document.getElementById('deptResetBtn');
+
+    const tableBody = document.querySelector('#editTable tbody');
+    const renumberBtn = document.getElementById('renumberBtn');
+    const renumberByCreatedBtn = document.getElementById('renumberByCreatedBtn');
+    const normalizeNamesBtn = document.getElementById('normalizeNamesBtn');
+    const normalizeParentsBtn = document.getElementById('normalizeParentsBtn');
+    const startNum = document.getElementById('startNum');
+    const prefix = document.getElementById('prefix');
+    const pad = document.getElementById('pad');
+
+    let editorRows = [];
+
+    exportBtn.addEventListener('click', async () => {
+      const snap = await getDocs(collection(db, 'records'));
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const json = JSON.stringify({ collection: 'records', count: data.length, data }, null, 2);
+      jsonArea.value = json;
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `records-export-${new Date().toISOString()}.json`; a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    importBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', async (e) => {
+      const f = e.target.files[0];
+      if (!f) return;
+      const text = await f.text();
+      jsonArea.value = text;
+    });
+
+    applyJsonBtn.addEventListener('click', () => {
+      try {
+        const obj = JSON.parse(jsonArea.value || '{}');
+        const rows = (obj.data || obj) // allow bare array
+          .map(r => normalizeRecord(r));
+        loadEditor(rows);
+      } catch (e) {
+        alert('Invalid JSON');
+      }
+    });
+
+    // --- Edit Department List Modal Logic ---
+    function openDeptModal(){
+      deptText.value = (DEPARTMENTS || []).join('\n');
+      deptOverlay.classList.add('show');
+    }
+    function closeDeptModal(){ deptOverlay.classList.remove('show'); }
+    function uniqueList(arr){
+      const seen = new Set();
+      const out = [];
+      arr.forEach(x => { const k = x.toLowerCase(); if (!seen.has(k)) { seen.add(k); out.push(x); } });
+      return out;
+    }
+    editDeptListBtn.addEventListener('click', openDeptModal);
+    deptCloseBtn.addEventListener('click', closeDeptModal);
+    deptResetBtn.addEventListener('click', () => { deptText.value = (defaultDeptList()).join('\n'); });
+    deptSaveBtn.addEventListener('click', () => {
+      const lines = (deptText.value || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      const normalized = uniqueList(lines.map(titleCaseName));
+      if (normalized.length === 0) { alert('Please enter at least one department'); return; }
+      DEPARTMENTS = normalized;
+      // Re-render editor to rebuild department options, preserve selections where possible
+      renderEditor();
+      closeDeptModal();
+    });
+
+    function defaultDeptList(){
+      return ['Delegates Affairs','Logistics','Hospitality','Sponsorship','Outreach','Social Media','Designing','Researcher','Academia Ambassador','Organising Team','Editor','Tech Department','Graphic Designer','Marketing Team'];
+    }
+
+    renumberBtn.addEventListener('click', () => {
+      const start = parseInt(startNum.value || '1', 10) || 1;
+      const p = prefix.value || '';
+      const padLen = Math.max(0, parseInt(pad.value || '0', 10) || 0);
+      let n = start;
+      editorRows = editorRows.map(r => {
+        const num = String(n++).padStart(padLen, '0');
+        return { ...r, id: `${p}${num}` };
+      });
+      renderEditor();
+    });
+
+    renumberByCreatedBtn.addEventListener('click', () => {
+      const start = parseInt(startNum.value || '1', 10) || 1;
+      const p = prefix.value || '';
+      const padLen = Math.max(0, parseInt(pad.value || '0', 10) || 0);
+      // Sort by created time ascending (fallback 0 go first)
+      const sorted = [...editorRows].sort((a,b) => (a.createdAtMs||0) - (b.createdAtMs||0));
+      let n = start;
+      const updated = sorted.map(r => {
+        const num = String(n++).padStart(padLen, '0');
+        return { ...r, id: `${p}${num}` };
+      });
+      editorRows = updated;
+      renderEditor();
+    });
+
+    function titleCaseName(s=''){
+      return (s || '')
+        .trim()
+        .split(/\s+/)
+        .map(w => w ? (w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()) : w)
+        .join(' ');
+    }
+
+    normalizeNamesBtn.addEventListener('click', () => {
+      editorRows = editorRows.map(r => ({ ...r, full_name: titleCaseName(r.full_name) }));
+      renderEditor();
+    });
+
+    normalizeParentsBtn.addEventListener('click', () => {
+      editorRows = editorRows.map(r => ({ 
+        ...r, 
+        father_name: titleCaseName(r.father_name), 
+        mother_name: titleCaseName(r.mother_name) 
+      }));
+      renderEditor();
+    });
+
+    saveChangesBtn.addEventListener('click', async () => {
+      if (!confirm('Apply changes to Firestore? This may recreate documents with new IDs.')) return;
+      // We need to upsert docs, and if ID changed, create new doc then delete old
+      for (const row of editorRows) {
+        const clean = denormalizeRecord(row);
+        // If originalId present and different from id, move
+        if (row.originalId && row.originalId !== row.id) {
+          await setDoc(doc(db, 'records', row.id), clean);
+          await deleteDoc(doc(db, 'records', row.originalId));
+        } else {
+          await setDoc(doc(db, 'records', row.id), clean);
+        }
+      }
+      alert('Saved. Reload to verify.');
+    });
+
+    function toMs(ts) {
+      try {
+        if (!ts) return 0;
+        if (typeof ts.toDate === 'function') return ts.toDate().getTime();
+        const d = new Date(ts);
+        const m = d.getTime();
+        return isNaN(m) ? 0 : m;
+      } catch { return 0; }
+    }
+
+    function normalizeRecord(r) {
+      const id = String(r.id || '').trim();
+      const full_name = r.full_name || '';
+      const father_name = r.father_name || '';
+      const mother_name = r.mother_name || '';
+      const gender = r.gender || '';
+      const phone = r.phone || '';
+      const institute = r.institute || '';
+      const departmentStr = (r.department || '').toString();
+      const departments = splitDepartments(departmentStr);
+      const createdRaw = r.created_at ?? null;
+      const createdAtMs = toMs(r.created_at);
+      return { originalId: id, id, full_name, father_name, mother_name, gender, phone, institute, departments, createdAtMs, createdRaw };
+    }
+
+    function denormalizeRecord(r) {
+      const department = (r.departments || []).join(', ');
+      return {
+        full_name: r.full_name || '',
+        father_name: r.father_name || '',
+        mother_name: r.mother_name || '',
+        gender: r.gender || '',
+        phone: r.phone || '',
+        institute: r.institute || '',
+        department,
+        ...(r.createdRaw ? { created_at: r.createdRaw } : {})
+      };
+    }
+
+    function splitDepartments(s) {
+      return (s || '')
+        .split(/[;,]/)
+        .map(x => x.replace(/^\s*["']?|["']?\s*$/g, ''))
+        .map(x => x.trim())
+        .filter(Boolean);
+    }
+
+    function loadEditor(rows) {
+      editorRows = rows;
+      renderEditor();
+    }
+
+    function renderEditor() {
+      tableBody.innerHTML = '';
+      for (let i = 0; i < editorRows.length; i++) {
+        const r = editorRows[i];
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><input class="inline-input" data-k="id" data-i="${i}" value="${escapeHtml(r.id)}" /></td>
+          <td><input class="inline-input" data-k="full_name" data-i="${i}" value="${escapeHtml(r.full_name)}" /></td>
+          <td><input class="inline-input" data-k="gender" data-i="${i}" value="${escapeHtml(r.gender)}" /></td>
+          <td><input class="inline-input" data-k="phone" data-i="${i}" value="${escapeHtml(r.phone)}" /></td>
+          <td><input class="inline-input" data-k="institute" data-i="${i}" value="${escapeHtml(r.institute)}" /></td>
+          <td>${departmentEditor(i, r.departments)}</td>
+        `;
+        tableBody.appendChild(tr);
+      }
+      // wire inputs
+      tableBody.querySelectorAll('input.inline-input').forEach(inp => {
+        inp.addEventListener('input', (e) => {
+          const i = parseInt(e.target.getAttribute('data-i'), 10);
+          const k = e.target.getAttribute('data-k');
+          editorRows[i] = { ...editorRows[i], [k]: e.target.value };
+        });
+      });
+      // wire dept checkboxes
+      tableBody.querySelectorAll('input[type="checkbox"][data-dep]').forEach(cb => {
+        cb.addEventListener('change', (e) => {
+          const i = parseInt(e.target.getAttribute('data-i'), 10);
+          const dep = e.target.getAttribute('data-dep');
+          const set = new Set(editorRows[i].departments || []);
+          if (e.target.checked) set.add(dep); else set.delete(dep);
+          editorRows[i] = { ...editorRows[i], departments: Array.from(set) };
+          // reflect chips
+          const chips = e.target.closest('td').querySelector('.chips');
+          chips.innerHTML = chipHtml(editorRows[i].departments);
+        });
+      });
+    }
+
+    function departmentEditor(i, selected) {
+      const options = DEPARTMENTS.map(dep => {
+        const checked = (selected || []).some(x => x.toLowerCase() === dep.toLowerCase());
+        const id = `c_${i}_${dep.toLowerCase().replace(/[^a-z0-9]+/g,'_')}`;
+        return `<label style="display:inline-flex;align-items:center;gap:6px;margin:2px 8px 2px 0;">
+          <input type="checkbox" data-i="${i}" data-dep="${escapeHtml(dep)}" id="${id}" ${checked ? 'checked' : ''} />
+          <span class="pill">${escapeHtml(dep)}</span>
+        </label>`;
+      }).join('');
+      return `<div class="chips" style="margin-bottom:6px;">${chipHtml(selected)}</div><div>${options}</div>`;
+    }
+
+    function chipHtml(arr) { return (arr || []).map(x => `<span class="pill">${escapeHtml(x)}</span>`).join(''); }
+
+    function escapeHtml(s='') { return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+    // Auto-load into editor on entry
+    (async function initLoad(){
+      const snap = await getDocs(collection(db, 'records'));
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      loadEditor(data.map(r => normalizeRecord(r)));
+    })();
+  </script>
+</body>
+</html>
