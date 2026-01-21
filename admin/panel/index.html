@@ -20,6 +20,7 @@
     .card { background:rgba(17, 24, 39, 0.7); border:1px solid #1f2937; border-radius:16px; box-shadow: 0 20px 60px rgba(0,0,0,.45); padding:18px; }
     .toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:12px 0 8px 0; }
     .searchbar { flex:1; min-width:260px; background:#0b1220; border:1px solid #1f2937; color:#e5e7eb; border-radius:10px; padding:10px 12px; outline:none; }
+    .filter-select { background:#0b1220; border:1px solid #1f2937; color:#e5e7eb; border-radius:10px; padding:10px 12px; outline:none; min-width:140px; }
     .table-wrap { overflow:auto; border:1px solid #1f2937; border-radius:12px; }
     .table { width:100%; border-collapse: separate; border-spacing:0; }
     .table thead th { position:sticky; top:0; background:#0b1220; color:#cbd5e1; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid #1f2937; padding:10px 12px; }
@@ -55,6 +56,15 @@
     /* PDF loading overlay */
     .pdf-loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 1000; color: white; font-size: 18px; }
     .pdf-loading.show { display: flex; }
+
+    /* Expandable row styles */
+    .expanded-row { background: rgba(15, 23, 42, 0.5); }
+    .expanded-content { padding: 16px; background: #0b1220; border: 1px solid #1f2937; border-radius: 8px; margin: 4px 0 8px 0; }
+    .expanded-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+    .expanded-item { display: flex; flex-direction: column; }
+    .expanded-label { color: #94a3b8; font-size: 12px; margin-bottom: 4px; }
+    .expanded-value { color: #e5e7eb; font-size: 14px; }
+    .expanded-actions { display: flex; gap: 8px; margin-top: 12px; }
   </style>
 </head>
 <body class="auth-pending">
@@ -81,6 +91,16 @@
       <div class="card">
         <div class="toolbar">
           <input id="searchInput" class="searchbar" type="text" placeholder="Search by form number, name, or phone" />
+          <select id="filterSelect" class="filter-select">
+            <option value="">All Departments</option>
+            <option value="IT">IT</option>
+            <option value="Marketing">Marketing</option>
+            <option value="Finance">Finance</option>
+            <option value="Logistics">Logistics</option>
+            <option value="PR">PR</option>
+            <option value="Design">Design</option>
+            <!-- More options will be populated dynamically -->
+          </select>
           <button id="refreshBtn" class="btn ghost">Refresh</button>
           <button id="exportXlsxBtn" class="btn ghost">Export Excel</button>
           <button id="exportPdfAllBtn" class="btn">Export All PDF</button>
@@ -95,8 +115,9 @@
                 <th class="nowrap">Form #</th>
                 <th>Name</th>
                 <th>Phone</th>
+                <th>Gender</th>
                 <th>Class</th>
-                <th>School</th>
+                <th>Institution</th>
                 <th>Department</th>
                 <th class="nowrap">Created</th>
                 <th class="nowrap">Actions</th>
@@ -104,7 +125,7 @@
             </thead>
             <tbody id="recordsTbody">
               <tr>
-                <td colspan="8">
+                <td colspan="9">
                   <div class="loading">
                     <div class="loading-spinner"></div>
                   </div>
@@ -241,12 +262,14 @@
     const tbody = document.getElementById('recordsTbody');
     const details = document.getElementById('detailsPanel');
     const searchInput = document.getElementById('searchInput');
+    const filterSelect = document.getElementById('filterSelect');
     const logoutBtn = document.getElementById('logoutBtn');
     const pdfLoading = document.getElementById('pdfLoading');
 
     let allRecords = [];
     let unsubscribe = null;
     let authInitialized = false;
+    let expandedRowId = null; // Track currently expanded row
 
     // Initialize auth and set up state listener
     async function initApp() {
@@ -340,39 +363,77 @@
     document.getElementById('refreshBtn').addEventListener('click', loadRecords);
 
     // Search functionality
-    searchInput.addEventListener('input', () => renderRows(filterRecords(searchInput.value)));
+    searchInput.addEventListener('input', () => renderRows(filterRecords()));
 
-    function filterRecords(q) {
-      q = (q || '').toLowerCase().trim();
-      if (!q) return allRecords;
-      return allRecords.filter(r =>
-        (r.id || '').toLowerCase().includes(q) ||
-        (r.full_name || '').toLowerCase().includes(q) ||
-        (r.phone || '').toLowerCase().includes(q) ||
-        (r.institute || '').toLowerCase().includes(q)
-      );
+    // Filter functionality
+    filterSelect.addEventListener('change', () => renderRows(filterRecords()));
+
+    // Filter records based on search and filter
+    function filterRecords() {
+      const searchTerm = (searchInput.value || '').toLowerCase().trim();
+      const filterValue = filterSelect.value;
+      
+      return allRecords.filter(r => {
+        // Search filter
+        const matchesSearch = !searchTerm || 
+          (r.id || '').toLowerCase().includes(searchTerm) ||
+          (r.full_name || '').toLowerCase().includes(searchTerm) ||
+          (r.phone || '').toLowerCase().includes(searchTerm) ||
+          (r.institute || '').toLowerCase().includes(searchTerm);
+        
+        // Department filter
+        const matchesFilter = !filterValue || (r.department || '') === filterValue;
+        
+        return matchesSearch && matchesFilter;
+      });
+    }
+
+    // Update filter dropdown with unique departments
+    function updateFilterOptions(records) {
+      const departments = new Set();
+      records.forEach(r => {
+        if (r.department) {
+          departments.add(r.department);
+        }
+      });
+      
+      // Get current options except "All Departments"
+      const currentOptions = Array.from(filterSelect.options).slice(1).map(opt => opt.value);
+      const newDepartments = Array.from(departments).filter(dept => !currentOptions.includes(dept));
+      
+      // Add new departments
+      newDepartments.forEach(dept => {
+        const option = document.createElement('option');
+        option.value = dept;
+        option.textContent = dept;
+        filterSelect.appendChild(option);
+      });
     }
 
     // Load records from Firestore
     async function loadRecords() {
       try {
         // Show loading state
-        tbody.innerHTML = '<tr><td colspan="8"><div class="loading"><div class="loading-spinner"></div></div></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9"><div class="loading"><div class="loading-spinner"></div></div></td></tr>';
         
         console.log('[Admin] Fetching records...');
         const qy = query(collection(db, 'records'), orderBy('created_at', 'desc'));
         const snap = await getDocs(qy);
         allRecords = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         console.log(`[Admin] Loaded ${allRecords.length} records`);
-        renderRows(allRecords);
+        
+        // Update filter options
+        updateFilterOptions(allRecords);
+        
+        renderRows(filterRecords());
         
         // Only show success toast on manual refresh or initial load
-        if (!searchInput.value) {
+        if (!searchInput.value && !filterSelect.value) {
           showToast(`Loaded ${allRecords.length} records`, 'success');
         }
       } catch (err) {
         console.error('[Admin] Failed to load records:', err);
-        tbody.innerHTML = '<tr><td colspan="8">Failed to load records. Please refresh.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9">Failed to load records. Please refresh.</td></tr>';
         
         // Don't show error for temporary network issues
         if (!err.message.includes('unavailable')) {
@@ -385,17 +446,19 @@
     function renderRows(rows) {
       tbody.innerHTML = '';
       if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="8">No records found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9">No records found</td></tr>';
         return;
       }
       
       for (const r of rows) {
         const tr = document.createElement('tr');
+        const isExpanded = expandedRowId === r.id;
         
         tr.innerHTML = `
           <td class="nowrap">${r.id}</td>
           <td>${escapeHtml(r.full_name)}</td>
           <td>${escapeHtml(r.phone)}</td>
+          <td>${escapeHtml(r.gender || '')}</td>
           <td>${escapeHtml(r.class || '')}</td>
           <td>${escapeHtml(r.institute)}</td>
           <td>${escapeHtml(r.department)}</td>
@@ -405,19 +468,93 @@
             <button class="btn" data-pdf="${r.id}">PDF</button>
           </td>`;
         tbody.appendChild(tr);
+        
+        // Add expanded row if this is the expanded row
+        if (isExpanded) {
+          const expandTr = document.createElement('tr');
+          expandTr.className = 'expanded-row';
+          expandTr.innerHTML = `
+            <td colspan="9">
+              <div class="expanded-content">
+                <div class="expanded-grid">
+                  <div class="expanded-item">
+                    <div class="expanded-label">Father's Name</div>
+                    <div class="expanded-value">${escapeHtml(r.father_name || '')}</div>
+                  </div>
+                  <div class="expanded-item">
+                    <div class="expanded-label">Mother's Name</div>
+                    <div class="expanded-value">${escapeHtml(r.mother_name || '')}</div>
+                  </div>
+                  <div class="expanded-item">
+                    <div class="expanded-label">Date of Birth</div>
+                    <div class="expanded-value">${escapeHtml(r.dob || '')}</div>
+                  </div>
+                  <div class="expanded-item">
+                    <div class="expanded-label">Email</div>
+                    <div class="expanded-value">${escapeHtml(r.email || '')}</div>
+                  </div>
+                  <div class="expanded-item">
+                    <div class="expanded-label">Address</div>
+                    <div class="expanded-value">${escapeHtml(r.address || '')}</div>
+                  </div>
+                  <div class="expanded-item">
+                    <div class="expanded-label">Landmark</div>
+                    <div class="expanded-value">${escapeHtml(r.landmark || '')}</div>
+                  </div>
+                  <div class="expanded-item">
+                    <div class="expanded-label">City</div>
+                    <div class="expanded-value">${escapeHtml(r.city || '')}</div>
+                  </div>
+                </div>
+                <div class="expanded-actions">
+                  <button class="btn" data-fullpdf="${r.id}">Download Full PDF</button>
+                  <button class="btn ghost" data-more="${r.id}">More Details</button>
+                  <button class="btn ghost" data-close="${r.id}">Close</button>
+                </div>
+              </div>
+            </td>`;
+          tbody.appendChild(expandTr);
+        }
       }
 
       // Add event listeners to buttons
       tbody.querySelectorAll('[data-view]').forEach(btn => btn.addEventListener('click', (e) => {
         const id = e.currentTarget.getAttribute('data-view');
         const rec = allRecords.find(x => x.id === id);
-        showDetails(rec);
+        
+        // Toggle expanded row
+        if (expandedRowId === id) {
+          expandedRowId = null;
+        } else {
+          expandedRowId = id;
+        }
+        
+        // Re-render rows to show/hide expanded content
+        renderRows(filterRecords());
       }));
 
       tbody.querySelectorAll('[data-pdf]').forEach(btn => btn.addEventListener('click', (e) => {
         const id = e.currentTarget.getAttribute('data-pdf');
         const rec = allRecords.find(x => x.id === id);
         downloadRecordPdf(rec);
+      }));
+
+      // Add event listeners for expanded row buttons
+      tbody.querySelectorAll('[data-fullpdf]').forEach(btn => btn.addEventListener('click', (e) => {
+        const id = e.currentTarget.getAttribute('data-fullpdf');
+        const rec = allRecords.find(x => x.id === id);
+        downloadRecordPdf(rec);
+      }));
+
+      tbody.querySelectorAll('[data-more]').forEach(btn => btn.addEventListener('click', (e) => {
+        const id = e.currentTarget.getAttribute('data-more');
+        const rec = allRecords.find(x => x.id === id);
+        openDetailModal(rec);
+      }));
+
+      tbody.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', (e) => {
+        expandedRowId = null;
+        renderRows(filterRecords());
       }));
     }
 
