@@ -9,371 +9,62 @@
   <!-- Include jsPDF library from allowed CDN -->
   <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <style>
-    /* Admin Panel Specific Styles */
-    body { 
-      min-height: 100vh;
-      background: linear-gradient(135deg, #0b1020 0%, #0f172a 100%);
-      color: #e5e7eb;
-      margin: 0;
-    }
-    
-    .admin-shell { 
-      min-height: 100vh; 
-      display: flex; 
-      flex-direction: column; 
-    }
-    
-    body.auth-pending .admin-shell { 
-      display: none; 
-    }
-    
-    .topbar { 
-      display: flex; 
-      align-items: center; 
-      justify-content: space-between; 
-      gap: 12px; 
-      padding: 16px 20px; 
-      backdrop-filter: blur(8px); 
-      background: rgba(15, 23, 42, 0.9); 
-      border-bottom: 1px solid #1f2937; 
-      position: sticky; 
-      top: 0; 
-      z-index: 10; 
-    }
-    
-    .brand { 
-      display: flex; 
-      align-items: center; 
-      gap: 10px; 
-    }
-    
-    .brand .logo { 
-      width: 56px; 
-      height: 56px; 
-      border-radius: 12px; 
-      object-fit: cover; 
-      background: #fff; 
-      box-shadow: 0 10px 28px rgba(158, 240, 26, 0.20); 
-    }
-    
-    .brand .title { 
-      margin: 0; 
-      font-size: 16px; 
-      color: #f8fafc; 
-      letter-spacing: .3px; 
-    }
-    
-    .content { 
-      flex: 1;
-      max-width: 1100px; 
-      width: 100%; 
-      margin: 24px auto; 
-      padding: 0 20px; 
-    }
-    
-    .card { 
-      background: rgba(17, 24, 39, 0.9); 
-      border: 1px solid #1f2937; 
-      border-radius: 16px; 
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45); 
-      padding: 18px; 
-      backdrop-filter: blur(10px);
-    }
-    
-    .toolbar { 
-      display: flex; 
-      gap: 10px; 
-      flex-wrap: wrap; 
-      align-items: center; 
-      margin: 12px 0 8px 0; 
-    }
-    
-    .searchbar { 
-      flex: 1; 
-      min-width: 260px; 
-      background: #0b1220; 
-      border: 1px solid #1f2937; 
-      color: #e5e7eb; 
-      border-radius: 10px; 
-      padding: 10px 12px; 
-      outline: none; 
-      font-size: 14px;
-    }
-    
-    .searchbar:focus {
-      border-color: #9ef01a;
-      box-shadow: 0 0 0 2px rgba(158, 240, 26, 0.2);
-    }
-    
-    .filter-select, .sort-select { 
-      background: #0b1220; 
-      border: 1px solid #1f2937; 
-      color: #e5e7eb; 
-      border-radius: 10px; 
-      padding: 10px 12px; 
-      outline: none; 
-      min-width: 140px; 
-      font-size: 14px;
-      cursor: pointer;
-    }
-    
-    .filter-select:focus, .sort-select:focus {
-      border-color: #9ef01a;
-      box-shadow: 0 0 0 2px rgba(158, 240, 26, 0.2);
-    }
-    
-    .table-wrap { 
-      overflow: auto; 
-      border: 1px solid #1f2937; 
-      border-radius: 12px; 
-      margin-top: 16px;
-      background: rgba(11, 18, 32, 0.8);
-    }
-    
-    .table { 
-      width: 100%; 
-      border-collapse: separate; 
-      border-spacing: 0; 
-    }
-    
-    .table thead th { 
-      position: sticky; 
-      top: 0; 
-      background: #0b1220; 
-      color: #cbd5e1; 
-      font-weight: 600; 
-      font-size: 12px; 
-      text-transform: uppercase; 
-      letter-spacing: .04em; 
-      border-bottom: 1px solid #1f2937; 
-      padding: 12px 16px; 
-    }
-    
-    .table tbody td { 
-      border-bottom: 1px solid rgba(31, 41, 55, 0.3); 
-      padding: 12px 16px; 
-      font-size: 14px; 
-      color: #e5e7eb; 
-    }
-    
-    .muted { 
-      color: #94a3b8; 
-      font-size: 12px; 
-    }
-    
-    .nowrap { 
-      white-space: nowrap; 
-    }
-    
-    .details { 
-      padding: 16px; 
-      background: #0b1220; 
-      border: 1px solid #1f2937; 
-      border-radius: 12px; 
-      margin-top: 14px; 
-    }
-    
-    .btn { 
-      border-radius: 10px; 
-      transition: transform .2s, box-shadow .2s, background-color .2s, border-color .2s, color .2s; 
-      border: none;
-      padding: 10px 16px;
-      font-weight: 600;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    
-    .btn.primary, .btn { 
-      background: linear-gradient(135deg, #9ef01a, #b9ff2b); 
-      border: none; 
-      color: #0b1220; 
-      font-weight: 600; 
-      box-shadow: 0 10px 24px rgba(158, 240, 26, 0.18); 
-    }
-    
-    .btn.primary:hover, .btn:hover { 
-      transform: translateY(-1px); 
-      box-shadow: 0 14px 32px rgba(158, 240, 26, 0.28); 
-    }
-    
-    .btn.ghost { 
-      background: transparent; 
-      border: 1px solid #9ef01a; 
-      color: #9ef01a; 
-    }
-    
-    .btn.ghost:hover { 
-      background: rgba(158, 240, 26, 0.08); 
-      border-color: #9ef01a; 
-      color: #eaffb8; 
-    }
-    
-    .modal-overlay { 
-      position: fixed; 
-      inset: 0; 
-      display: none; 
-      align-items: center; 
-      justify-content: center; 
-      background: rgba(0, 0, 0, 0.5); 
-      z-index: 50; 
-      padding: 20px; 
-    }
-    
-    .modal { 
-      width: 100%; 
-      max-width: 720px; 
-      background: #0b1220; 
-      border: 1px solid #1f2937; 
-      border-radius: 14px; 
-      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6); 
-    }
-    
-    .modal-head { 
-      display: flex; 
-      align-items: center; 
-      justify-content: space-between; 
-      padding: 14px 16px; 
-      border-bottom: 1px solid #1f2937; 
-    }
-    
-    .modal-body { 
-      padding: 14px 16px; 
-      max-height: 70vh; 
-      overflow: auto; 
-    }
-    
-    .kv { 
-      display: grid; 
-      grid-template-columns: 180px 1fr; 
-      gap: 10px; 
-    }
-    
-    .kv .k { 
-      color: #94a3b8; 
-    }
-    
-    .hidden { 
-      display: none; 
-    }
+    body { min-height:100vh; background: radial-gradient(1200px 600px at 20% -10%, #7c3aed22, transparent), radial-gradient(1000px 500px at 120% 10%, #06b6d422, transparent), linear-gradient(180deg, #0b1020, #0f172a); color:#e5e7eb; }
+    .admin-shell { min-height:100vh; display:flex; flex-direction:column; }
+    body.auth-pending .admin-shell { display:none; }
+    .topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 20px; backdrop-filter: blur(8px); background:rgba(15,23,42,.45); border-bottom:1px solid #1f2937; position:sticky; top:0; z-index:10; }
+    .brand { display:flex; align-items:center; gap:10px; }
+    .brand .logo { width:56px; height:56px; border-radius:12px; object-fit:cover; background:#fff; box-shadow: 0 10px 28px rgba(158,240,26,.20); }
+    .brand .title { margin:0; font-size:16px; color:#f8fafc; letter-spacing:.3px; }
+    .content { max-width:1100px; width:100%; margin:24px auto; padding:0 20px; }
+    .card { background:rgba(17, 24, 39, 0.7); border:1px solid #1f2937; border-radius:16px; box-shadow: 0 20px 60px rgba(0,0,0,.45); padding:18px; }
+    .toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:12px 0 8px 0; }
+    .searchbar { flex:1; min-width:260px; background:#0b1220; border:1px solid #1f2937; color:#e5e7eb; border-radius:10px; padding:10px 12px; outline:none; }
+    .filter-select { background:#0b1220; border:1px solid #1f2937; color:#e5e7eb; border-radius:10px; padding:10px 12px; outline:none; min-width:140px; }
+    .table-wrap { overflow:auto; border:1px solid #1f2937; border-radius:12px; }
+    .table { width:100%; border-collapse: separate; border-spacing:0; }
+    .table thead th { position:sticky; top:0; background:#0b1220; color:#cbd5e1; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid #1f2937; padding:10px 12px; }
+    .table tbody td { border-bottom:1px solid #0f1a2e; padding:10px 12px; font-size:14px; color:#e5e7eb; }
+    .muted { color:#94a3b8; font-size:12px; }
+    .nowrap { white-space:nowrap; }
+    .details { padding:16px; background:#0b1220; border:1px solid #1f2937; border-radius:12px; margin-top:14px; }
+    :root{ --neo:#9ef01a; --neo-dark:#9ef01a; }
+    .btn { border-radius:10px; transition:.2s transform, .2s box-shadow, .2s background-color, .2s border-color, .2s color; }
+    .btn.primary, .btn { background:linear-gradient(135deg, var(--primary, var(--neo)), var(--primary-strong, #b9ff2b)); border:none; color:#0b1220; font-weight:600; box-shadow:0 10px 24px rgba(158,240,26,.18); }
+    .btn.primary:hover, .btn:hover { transform: translateY(-1px); box-shadow:0 14px 32px rgba(158,240,26,.28); }
+    .btn.ghost { background:transparent; border:1px solid var(--primary, var(--neo)); color:var(--primary, var(--neo)); }
+    .btn.ghost:hover { background:rgba(158,240,26,.08); border-color:var(--primary, var(--neo)); color:#eaffb8; }
+    .modal-overlay { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.5); z-index:50; padding:20px; }
+    .modal { width:100%; max-width:720px; background:#0b1220; border:1px solid #1f2937; border-radius:14px; box-shadow:0 30px 80px rgba(0,0,0,.6); }
+    .modal-head { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid #1f2937; }
+    .modal-body { padding:14px 16px; max-height:70vh; overflow:auto; }
+    .kv { display:grid; grid-template-columns: 180px 1fr; gap:10px; }
+    .kv .k { color:#94a3b8; }
+    .hidden { display: none; }
     
     /* Toast styles */
-    .toast {
-      position: fixed;
-      left: 50%;
-      bottom: 24px;
-      transform: translateX(-50%) translateY(20px);
-      opacity: 0;
-      pointer-events: none;
-      background: #0b1220;
-      border: 1px solid #1f2937;
-      color: #e5e7eb;
-      border-radius: 12px;
-      padding: 12px 14px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, .5);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      min-width: 260px;
-      z-index: 1000;
-      transition: .25s opacity, .25s transform;
-    }
-    
-    .toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-      pointer-events: auto;
-    }
-    
-    .toast.success {
-      border-color: rgba(158, 240, 26, .5);
-    }
-    
-    .toast.error {
-      border-color: #7f1d1d;
-    }
+    .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:#0b1220;border:1px solid #1f2937;color:#e5e7eb;border-radius:12px;padding:12px 14px;box-shadow:0 20px 50px rgba(0,0,0,.5);display:flex;align-items:center;gap:12px;min-width:260px;z-index:1000;transition:.25s opacity,.25s transform}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+    .toast.success{border-color:rgba(158,240,26,.5)}
+    .toast.error{border-color:#7f1d1d}
 
     /* Loading state */
-    .loading { 
-      display: flex; 
-      justify-content: center; 
-      align-items: center; 
-      padding: 40px; 
-    }
-    
-    .loading-spinner { 
-      width: 40px; 
-      height: 40px; 
-      border: 4px solid #1f2937; 
-      border-left: 4px solid #9ef01a; 
-      border-radius: 50%; 
-      animation: spin 1s linear infinite; 
-    }
-    
-    @keyframes spin { 
-      0% { transform: rotate(0deg); } 
-      100% { transform: rotate(360deg); } 
-    }
+    .loading { display: flex; justify-content: center; align-items: center; padding: 40px; }
+    .loading-spinner { width: 40px; height: 40px; border: 4px solid #1f2937; border-left: 4px solid #9ef01a; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
     /* PDF loading overlay */
-    .pdf-loading { 
-      position: fixed; 
-      top: 0; 
-      left: 0; 
-      width: 100%; 
-      height: 100%; 
-      background: rgba(0, 0, 0, 0.7); 
-      display: none; 
-      align-items: center; 
-      justify-content: center; 
-      z-index: 1000; 
-      color: white; 
-      font-size: 18px; 
-    }
-    
-    .pdf-loading.show { 
-      display: flex; 
-    }
+    .pdf-loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 1000; color: white; font-size: 18px; }
+    .pdf-loading.show { display: flex; }
 
     /* Expandable row styles */
-    .expanded-row { 
-      background: rgba(15, 23, 42, 0.5); 
-    }
-    
-    .expanded-content { 
-      padding: 16px; 
-      background: #0b1220; 
-      border: 1px solid #1f2937; 
-      border-radius: 8px; 
-      margin: 4px 0 8px 0; 
-    }
-    
-    .expanded-grid { 
-      display: grid; 
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); 
-      gap: 12px; 
-    }
-    
-    .expanded-item { 
-      display: flex; 
-      flex-direction: column; 
-    }
-    
-    .expanded-label { 
-      color: #94a3b8; 
-      font-size: 12px; 
-      margin-bottom: 4px; 
-    }
-    
-    .expanded-value { 
-      color: #e5e7eb; 
-      font-size: 14px; 
-    }
-    
-    .expanded-actions { 
-      display: flex; 
-      gap: 8px; 
-      margin-top: 12px; 
-    }
+    .expanded-row { background: rgba(15, 23, 42, 0.5); }
+    .expanded-content { padding: 16px; background: #0b1220; border: 1px solid #1f2937; border-radius: 8px; margin: 4px 0 8px 0; }
+    .expanded-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+    .expanded-item { display: flex; flex-direction: column; }
+    .expanded-label { color: #94a3b8; font-size: 12px; margin-bottom: 4px; }
+    .expanded-value { color: #e5e7eb; font-size: 14px; }
+    .expanded-actions { display: flex; gap: 8px; margin-top: 12px; }
 
     /* Mobile Responsive Styles */
     @media (max-width: 768px) {
@@ -503,6 +194,17 @@
         display: none;
       }
     }
+
+    /* Sort select styling */
+    .sort-select {
+      background:#0b1220;
+      border:1px solid #1f2937;
+      color:#e5e7eb;
+      border-radius:10px;
+      padding:10px 12px;
+      outline:none;
+      min-width:140px;
+    }
   </style>
 </head>
 <body class="auth-pending">
@@ -529,23 +231,14 @@
       <div class="card">
         <div class="toolbar">
           <input id="searchInput" class="searchbar" type="text" placeholder="Search by form number, name, or phone" />
-          <select id="filterSelect" class="filter-select">
-            <option value="">All Departments</option>
-            <!-- Departments will be populated from the registration form data -->
-            <option value="Delegates affairs">Delegates affairs</option>
-            <option value="Logistics">Logistics</option>
-            <option value="Hospitality">Hospitality</option>
-            <option value="Sponsorship">Sponsorship</option>
-            <option value="Outreach">Outreach</option>
-            <option value="Social media">Social media</option>
-            <option value="Designing">Designing</option>
-            <option value="Researcher">Researcher</option>
-            <option value="Academia Ambassador">Academia Ambassador</option>
-            <option value="Organising team">Organising team</option>
-            <option value="Editor">Editor</option>
-            <option value="Tech department (coding & web developer)">Tech department</option>
-            <option value="Graphic designer">Graphic designer</option>
-            <option value="Marketing Team">Marketing Team</option>
+          <select id="filterSelect" class="filter-select" multiple>
+            <!-- Populated dynamically -->
+          </select>
+          <select id="genderFilter" class="filter-select">
+            <option value="">All Genders</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
           </select>
           <select id="sortSelect" class="sort-select">
             <option value="">Sort By</option>
@@ -553,6 +246,7 @@
             <option value="created_asc">Oldest First</option>
             <option value="name_asc">Name A-Z</option>
             <option value="name_desc">Name Z-A</option>
+            <option value="gender">Gender</option>
             <option value="class">Class</option>
             <option value="department">Department A-Z</option>
           </select>
@@ -656,6 +350,29 @@
       'Marketing Team'
     ];
 
+    // Check if jsPDF is loaded
+    function checkJsPdfLoaded() {
+      if (typeof window.jspdf === 'undefined') {
+        console.error('jsPDF not loaded properly');
+        // Try alternative access method
+        if (typeof window.jsPDF !== 'undefined') {
+          console.log('Found jsPDF in window.jsPDF');
+          return true;
+        }
+        return false;
+      }
+      if (typeof window.jspdf.jsPDF === 'undefined') {
+        console.error('jsPDF constructor not available in jspdf.jsPDF');
+        // Try alternative access method
+        if (typeof window.jsPDF !== 'undefined') {
+          console.log('Found jsPDF in window.jsPDF');
+          return true;
+        }
+        return false;
+      }
+      return true;
+    }
+
     // Get jsPDF constructor with fallbacks
     function getJsPDF() {
       // Try multiple possible locations for jsPDF
@@ -713,6 +430,7 @@
     const details = document.getElementById('detailsPanel');
     const searchInput = document.getElementById('searchInput');
     const filterSelect = document.getElementById('filterSelect');
+    const genderFilter = document.getElementById('genderFilter');
     const sortSelect = document.getElementById('sortSelect');
     const logoutBtn = document.getElementById('logoutBtn');
     const pdfLoading = document.getElementById('pdfLoading');
@@ -759,11 +477,11 @@
 
     // Initialize department filter dropdown with all available departments
     function initializeDepartmentFilter() {
-      // Clear existing options except "All Departments"
-      while (filterSelect.options.length > 1) {
-        filterSelect.remove(1);
+      // Ensure multi-select and clear all existing options
+      filterSelect.setAttribute('multiple', 'multiple');
+      while (filterSelect.options.length > 0) {
+        filterSelect.remove(0);
       }
-      
       // Add all departments from the predefined list
       DEPARTMENTS.forEach(department => {
         const option = document.createElement('option');
@@ -838,7 +556,9 @@
 
     // Filter functionality
     filterSelect.addEventListener('change', () => {
-      console.log(`Filtering by department: ${filterSelect.value}`);
+      renderRows(filterAndSortRecords());
+    });
+    genderFilter.addEventListener('change', () => {
       renderRows(filterAndSortRecords());
     });
 
@@ -854,28 +574,30 @@
     // Filter records based on search and filter
     function filterRecords() {
       const searchTerm = (searchInput.value || '').toLowerCase().trim();
-      const filterValue = filterSelect.value;
-      
-      console.log(`Filtering - Search: "${searchTerm}", Department: "${filterValue}"`);
+      const selectedDepartments = Array.from(filterSelect.selectedOptions || []).map(o => o.value).filter(Boolean);
+      const genderValue = (genderFilter && genderFilter.value) || '';
       
       return allRecords.filter(r => {
-        // Search filter
         const matchesSearch = !searchTerm || 
           (r.id || '').toLowerCase().includes(searchTerm) ||
           (r.full_name || '').toLowerCase().includes(searchTerm) ||
           (r.phone || '').toLowerCase().includes(searchTerm) ||
           (r.institute || '').toLowerCase().includes(searchTerm);
         
-        // Department filter
-        let matchesFilter = true;
-        if (filterValue) {
-          // Check if the record's department contains the filter value
-          // Since departments can have multiple values separated by commas
+        // Department filter (multi)
+        let matchesDept = true;
+        if (selectedDepartments.length > 0) {
           const recordDepartments = (r.department || '').split(',').map(d => d.trim());
-          matchesFilter = recordDepartments.some(dept => dept === filterValue);
+          matchesDept = recordDepartments.some(dept => selectedDepartments.includes(dept));
         }
         
-        return matchesSearch && matchesFilter;
+        // Gender filter
+        let matchesGender = true;
+        if (genderValue) {
+          matchesGender = (r.gender || '') === genderValue;
+        }
+        
+        return matchesSearch && matchesDept && matchesGender;
       });
     }
 
@@ -907,6 +629,14 @@
           return records.sort((a, b) => 
             (b.full_name || '').localeCompare(a.full_name || '')
           );
+          
+        case 'gender':
+          return records.sort((a, b) => {
+            const genderOrder = { 'Male': 1, 'Female': 2, 'Other': 3 };
+            const orderA = genderOrder[a.gender] || 4;
+            const orderB = genderOrder[b.gender] || 4;
+            return orderA - orderB || (a.full_name || '').localeCompare(b.full_name || '');
+          });
           
         case 'class':
           return records.sort((a, b) => {
@@ -978,7 +708,7 @@
         const isExpanded = expandedRowId === r.id;
         
         tr.innerHTML = `
-          <td class="nowrap">${escapeHtml(r.id)}</td>
+          <td class="nowrap">${r.id}</td>
           <td>${escapeHtml(r.full_name)}</td>
           <td>${escapeHtml(r.phone)}</td>
           <td>${escapeHtml(r.gender || '')}</td>
@@ -1294,7 +1024,7 @@
         pdfLoading.classList.remove('show');
         showToast('Error exporting all records as PDF: ' + error.message, 'error');
       }
-    }
+    });
 
     // Excel export
     document.getElementById('exportXlsxBtn').addEventListener('click', async () => {
