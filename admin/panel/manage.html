@@ -36,7 +36,7 @@
 <body class="auth-pending">
   <div class="topbar">
     <div style="display:flex; align-items:center; gap:10px;">
-      <a href="./test.html" class="btn ghost">Back</a>
+      <a href="./" class="btn ghost">Back</a>
       <strong>Manage Records (JSON)</strong>
     </div>
 
@@ -87,6 +87,7 @@
       <div class="toolbar">
         <button id="renumberBtn" class="btn">Renumber Sequential</button>
         <button id="renumberByCreatedBtn" class="btn">Renumber by Created</button>
+        <button id="renumberByCreatedSaveBtn" class="btn danger">Renumber by Created & Save</button>
         <button id="normalizeNamesBtn" class="btn ghost">Normalize Names</button>
         <button id="normalizeParentsBtn" class="btn ghost">Normalize Parent Names</button>
         <input id="startNum" class="inline-input" type="number" value="1" min="1" style="max-width:120px" />
@@ -100,6 +101,8 @@
             <tr>
               <th style="width:120px;">Form # (ID)</th>
               <th>Name</th>
+              <th>Father's Name</th>
+              <th>Mother's Name</th>
               <th>Gender</th>
               <th>Phone</th>
               <th>Institute</th>
@@ -158,6 +161,7 @@
     const tableBody = document.querySelector('#editTable tbody');
     const renumberBtn = document.getElementById('renumberBtn');
     const renumberByCreatedBtn = document.getElementById('renumberByCreatedBtn');
+    const renumberByCreatedSaveBtn = document.getElementById('renumberByCreatedSaveBtn');
     const normalizeNamesBtn = document.getElementById('normalizeNamesBtn');
     const normalizeParentsBtn = document.getElementById('normalizeParentsBtn');
     const startNum = document.getElementById('startNum');
@@ -254,33 +258,41 @@
     });
 
     function titleCaseName(s=''){
-      return (s || '')
-        .trim()
-        .split(/\s+/)
-        .map(w => w ? (w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()) : w)
-        .join(' ');
+      const str = (s || '').trim().replace(/\s+/g,' ');
+      return str.split(' ').map(w => w ? (w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()) : w).join(' ');
     }
 
     normalizeNamesBtn.addEventListener('click', () => {
-      editorRows = editorRows.map(r => ({ ...r, full_name: titleCaseName(r.full_name) }));
+      let changed = 0;
+      editorRows = editorRows.map(r => {
+        const before = r.full_name || '';
+        const after = titleCaseName(before);
+        if (before !== after) changed++;
+        return { ...r, full_name: after };
+      });
       renderEditor();
+      alert(`Normalized ${changed} name(s). Remember to click Save Changes to persist.`);
     });
 
     normalizeParentsBtn.addEventListener('click', () => {
-      editorRows = editorRows.map(r => ({ 
-        ...r, 
-        father_name: titleCaseName(r.father_name), 
-        mother_name: titleCaseName(r.mother_name) 
-      }));
+      let changed = 0;
+      editorRows = editorRows.map(r => { 
+        const fBefore = r.father_name || '';
+        const mBefore = r.mother_name || '';
+        const fAfter = titleCaseName(fBefore);
+        const mAfter = titleCaseName(mBefore);
+        if (fBefore !== fAfter) changed++;
+        if (mBefore !== mAfter) changed++;
+        return { ...r, father_name: fAfter, mother_name: mAfter };
+      });
       renderEditor();
+      alert(`Normalized ${changed} parent name field(s). Save to persist.`);
     });
 
-    saveChangesBtn.addEventListener('click', async () => {
+    async function applySaveChanges(){
       if (!confirm('Apply changes to Firestore? This may recreate documents with new IDs.')) return;
-      // We need to upsert docs, and if ID changed, create new doc then delete old
       for (const row of editorRows) {
         const clean = denormalizeRecord(row);
-        // If originalId present and different from id, move
         if (row.originalId && row.originalId !== row.id) {
           await setDoc(doc(db, 'records', row.id), clean);
           await deleteDoc(doc(db, 'records', row.originalId));
@@ -289,6 +301,19 @@
         }
       }
       alert('Saved. Reload to verify.');
+    }
+
+    saveChangesBtn.addEventListener('click', async () => { await applySaveChanges(); });
+
+    renumberByCreatedSaveBtn.addEventListener('click', async () => {
+      const start = parseInt(startNum.value || '1', 10) || 1;
+      const p = prefix.value || '';
+      const padLen = Math.max(0, parseInt(pad.value || '0', 10) || 0);
+      const sorted = [...editorRows].sort((a,b) => (a.createdAtMs||0) - (b.createdAtMs||0));
+      let n = start;
+      editorRows = sorted.map(r => ({ ...r, id: `${p}${String(n++).padStart(padLen,'0')}` }));
+      renderEditor();
+      await applySaveChanges();
     });
 
     function toMs(ts) {
@@ -351,6 +376,8 @@
         tr.innerHTML = `
           <td><input class="inline-input" data-k="id" data-i="${i}" value="${escapeHtml(r.id)}" /></td>
           <td><input class="inline-input" data-k="full_name" data-i="${i}" value="${escapeHtml(r.full_name)}" /></td>
+          <td><input class="inline-input" data-k="father_name" data-i="${i}" value="${escapeHtml(r.father_name || '')}" /></td>
+          <td><input class="inline-input" data-k="mother_name" data-i="${i}" value="${escapeHtml(r.mother_name || '')}" /></td>
           <td><input class="inline-input" data-k="gender" data-i="${i}" value="${escapeHtml(r.gender)}" /></td>
           <td><input class="inline-input" data-k="phone" data-i="${i}" value="${escapeHtml(r.phone)}" /></td>
           <td><input class="inline-input" data-k="institute" data-i="${i}" value="${escapeHtml(r.institute)}" /></td>
