@@ -57,6 +57,7 @@
     <div class="card" style="margin-top:16px;">
       <div class="toolbar">
         <button id="renumberBtn" class="btn">Renumber Sequential</button>
+        <button id="renumberByCreatedBtn" class="btn">Renumber by Created</button>
         <input id="startNum" class="inline-input" type="number" value="1" min="1" style="max-width:120px" />
         <input id="prefix" class="inline-input" type="text" placeholder="Prefix (optional)" style="max-width:180px" />
         <input id="pad" class="inline-input" type="number" value="0" min="0" style="max-width:100px" />
@@ -119,6 +120,7 @@
 
     const tableBody = document.querySelector('#editTable tbody');
     const renumberBtn = document.getElementById('renumberBtn');
+    const renumberByCreatedBtn = document.getElementById('renumberByCreatedBtn');
     const startNum = document.getElementById('startNum');
     const prefix = document.getElementById('prefix');
     const pad = document.getElementById('pad');
@@ -168,6 +170,21 @@
       renderEditor();
     });
 
+    renumberByCreatedBtn.addEventListener('click', () => {
+      const start = parseInt(startNum.value || '1', 10) || 1;
+      const p = prefix.value || '';
+      const padLen = Math.max(0, parseInt(pad.value || '0', 10) || 0);
+      // Sort by created time ascending (fallback 0 go first)
+      const sorted = [...editorRows].sort((a,b) => (a.createdAtMs||0) - (b.createdAtMs||0));
+      let n = start;
+      const updated = sorted.map(r => {
+        const num = String(n++).padStart(padLen, '0');
+        return { ...r, id: `${p}${num}` };
+      });
+      editorRows = updated;
+      renderEditor();
+    });
+
     saveChangesBtn.addEventListener('click', async () => {
       if (!confirm('Apply changes to Firestore? This may recreate documents with new IDs.')) return;
       // We need to upsert docs, and if ID changed, create new doc then delete old
@@ -184,6 +201,16 @@
       alert('Saved. Reload to verify.');
     });
 
+    function toMs(ts) {
+      try {
+        if (!ts) return 0;
+        if (typeof ts.toDate === 'function') return ts.toDate().getTime();
+        const d = new Date(ts);
+        const m = d.getTime();
+        return isNaN(m) ? 0 : m;
+      } catch { return 0; }
+    }
+
     function normalizeRecord(r) {
       const id = String(r.id || '').trim();
       const full_name = r.full_name || '';
@@ -192,7 +219,9 @@
       const institute = r.institute || '';
       const departmentStr = (r.department || '').toString();
       const departments = splitDepartments(departmentStr);
-      return { originalId: id, id, full_name, gender, phone, institute, departments };
+      const createdRaw = r.created_at ?? null;
+      const createdAtMs = toMs(r.created_at);
+      return { originalId: id, id, full_name, gender, phone, institute, departments, createdAtMs, createdRaw };
     }
 
     function denormalizeRecord(r) {
@@ -202,7 +231,8 @@
         gender: r.gender || '',
         phone: r.phone || '',
         institute: r.institute || '',
-        department
+        department,
+        ...(r.createdRaw ? { created_at: r.createdRaw } : {})
       };
     }
 
