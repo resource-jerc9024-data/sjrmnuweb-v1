@@ -334,19 +334,19 @@
 
     // Department list from registration form
     const DEPARTMENTS = [
-      'Delegates affairs',
+      'Delegates Affairs',
       'Logistics',
       'Hospitality',
       'Sponsorship',
       'Outreach',
-      'Social media',
+      'Social Media',
       'Designing',
       'Researcher',
       'Academia Ambassador',
-      'Organising team',
+      'Organising Team',
       'Editor',
-      'Tech department (coding & web developer)',
-      'Graphic designer',
+      'Tech Department',
+      'Graphic Designer',
       'Marketing Team'
     ];
 
@@ -584,11 +584,16 @@
           (r.phone || '').toLowerCase().includes(searchTerm) ||
           (r.institute || '').toLowerCase().includes(searchTerm);
         
-        // Department filter (multi)
+        // Department filter (multi, AND logic, case-insensitive)
         let matchesDept = true;
         if (selectedDepartments.length > 0) {
-          const recordDepartments = (r.department || '').split(',').map(d => d.trim());
-          matchesDept = recordDepartments.some(dept => selectedDepartments.includes(dept));
+          const recordDepartmentsLC = (r.department || '')
+            .split(',')
+            .map(d => d.trim().toLowerCase())
+            .filter(Boolean);
+          const selectedDepartmentsLC = selectedDepartments.map(d => d.toLowerCase());
+          // Require every selected department to be present in the record
+          matchesDept = selectedDepartmentsLC.every(sd => recordDepartmentsLC.includes(sd));
         }
         
         // Gender filter
