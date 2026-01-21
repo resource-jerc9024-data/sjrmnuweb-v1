@@ -216,6 +216,56 @@
       input.value = value;
     }
 
+    // Function to format institution/school/college names
+    function formatInstituteName(input) {
+      if (!input || !input.value) return;
+      
+      let value = input.value.trim();
+      
+      // Handle common abbreviations and special cases
+      const specialWords = {
+        'and': 'and',
+        'of': 'of',
+        'the': 'the',
+        'in': 'in',
+        'for': 'for',
+        'at': 'at',
+        'by': 'by',
+        'with': 'with',
+        'on': 'on',
+        'to': 'to',
+        'a': 'a',
+        'an': 'an',
+        'or': 'or',
+        '&': '&'
+      };
+      
+      // Split by spaces and format each word
+      value = value.split(/\s+/)
+        .map((word, index) => {
+          // Handle empty words
+          if (!word) return '';
+          
+          // Check if it's a special word (not first word)
+          const lowerWord = word.toLowerCase();
+          if (index > 0 && specialWords[lowerWord]) {
+            return specialWords[lowerWord];
+          }
+          
+          // Handle acronyms (words that are all caps or contain dots)
+          if (word === word.toUpperCase() || word.includes('.')) {
+            return word;
+          }
+          
+          // Capitalize first letter, lowercase the rest
+          return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+        })
+        .join(' ');
+      
+      // Update the input value
+      input.value = value;
+    }
+
     // Form validation utility
     (function(){
       function ensureToast(){
@@ -317,6 +367,11 @@
             // Auto-format name fields on blur
             if (field.name === 'full_name' || field.name === 'father_name' || field.name === 'mother_name') {
               formatNameField(field);
+            }
+            
+            // Auto-format institute name on blur
+            if (field.name === 'institute') {
+              formatInstituteName(field);
             }
           });
           
@@ -498,6 +553,12 @@
               formatNameField(input);
             }
           });
+          
+          // Auto-format institute name before validation
+          const instituteInput = form.querySelector('[name="institute"]');
+          if (instituteInput) {
+            formatInstituteName(instituteInput);
+          }
           
           // Validate form before submission
           if (!window.validateForm(form)) {
