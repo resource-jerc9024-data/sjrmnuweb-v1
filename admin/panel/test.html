@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Panel SJR MUN</title>
+  <link rel="stylesheet" href="../../handler/styles.css" />
+  <link rel="icon" type="image/x-icon" href="../../favicon.ico" />
+  <!-- Include jsPDF library from allowed CDN -->
+  <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <style>
+    body { min-height:100vh; background: radial-gradient(1200px 600px at 20% -10%, #7c3aed22, transparent), radial-gradient(1000px 500px at 120% 10%, #06b6d422, transparent), linear-gradient(180deg, #0b1020, #0f172a); color:#e5e7eb; }
+    .admin-shell { min-height:100vh; display:flex; flex-direction:column; }
+    body.auth-pending .admin-shell { display:none; }
+    .topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 20px; backdrop-filter: blur(8px); background:rgba(15,23,42,.45); border-bottom:1px solid #1f2937; position:sticky; top:0; z-index:10; }
+    .brand { display:flex; align-items:center; gap:10px; }
+    .brand .logo { width:56px; height:56px; border-radius:12px; object-fit:cover; background:#fff; box-shadow: 0 10px 28px rgba(158,240,26,.20); }
+    .brand .title { margin:0; font-size:16px; color:#f8fafc; letter-spacing:.3px; }
+    .content { max-width:1100px; width:100%; margin:24px auto; padding:0 20px; }
+    .card { background:rgba(17, 24, 39, 0.7); border:1px solid #1f2937; border-radius:16px; box-shadow: 0 20px 60px rgba(0,0,0,.45); padding:18px; }
+    .toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:12px 0 8px 0; }
+    .searchbar { flex:1; min-width:260px; background:#0b1220; border:1px solid #1f2937; color:#e5e7eb; border-radius:10px; padding:10px 12px; outline:none; }
+    .filter-select { background:#0b1220; border:1px solid #1f2937; color:#e5e7eb; border-radius:10px; padding:10px 12px; outline:none; min-width:140px; }
+    .table-wrap { overflow:auto; border:1px solid #1f2937; border-radius:12px; }
+    .table { width:100%; border-collapse: separate; border-spacing:0; }
+    .table thead th { position:sticky; top:0; background:#0b1220; color:#cbd5e1; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid #1f2937; padding:10px 12px; }
+    .table tbody td { border-bottom:1px solid #0f1a2e; padding:10px 12px; font-size:14px; color:#e5e7eb; }
+    .muted { color:#94a3b8; font-size:12px; }
+    .nowrap { white-space:nowrap; }
+    .details { padding:16px; background:#0b1220; border:1px solid #1f2937; border-radius:12px; margin-top:14px; }
+    :root{ --neo:#9ef01a; --neo-dark:#9ef01a; }
+    .btn { border-radius:10px; transition:.2s transform, .2s box-shadow, .2s background-color, .2s border-color, .2s color; }
+    .btn.primary, .btn { background:linear-gradient(135deg, var(--primary, var(--neo)), var(--primary-strong, #b9ff2b)); border:none; color:#0b1220; font-weight:600; box-shadow:0 10px 24px rgba(158,240,26,.18); }
+    .btn.primary:hover, .btn:hover { transform: translateY(-1px); box-shadow:0 14px 32px rgba(158,240,26,.28); }
+    .btn.ghost { background:transparent; border:1px solid var(--primary, var(--neo)); color:var(--primary, var(--neo)); }
+    .btn.ghost:hover { background:rgba(158,240,26,.08); border-color:var(--primary, var(--neo)); color:#eaffb8; }
+    .modal-overlay { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.5); z-index:50; padding:20px; }
+    .modal { width:100%; max-width:720px; background:#0b1220; border:1px solid #1f2937; border-radius:14px; box-shadow:0 30px 80px rgba(0,0,0,.6); }
+    .modal-head { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid #1f2937; }
+    .modal-body { padding:14px 16px; max-height:70vh; overflow:auto; }
+    .kv { display:grid; grid-template-columns: 180px 1fr; gap:10px; }
+    .kv .k { color:#94a3b8; }
+    .hidden { display: none; }
+    
+    /* Toast styles */
+    .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;pointer-events:none;background:#0b1220;border:1px solid #1f2937;color:#e5e7eb;border-radius:12px;padding:12px 14px;box-shadow:0 20px 50px rgba(0,0,0,.5);display:flex;align-items:center;gap:12px;min-width:260px;z-index:1000;transition:.25s opacity,.25s transform}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+    .toast.success{border-color:rgba(158,240,26,.5)}
+    .toast.error{border-color:#7f1d1d}
+
+    /* Loading state */
+    .loading { display: flex; justify-content: center; align-items: center; padding: 40px; }
+    .loading-spinner { width: 40px; height: 40px; border: 4px solid #1f2937; border-left: 4px solid #9ef01a; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* PDF loading overlay */
+    .pdf-loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 1000; color: white; font-size: 18px; }
+    .pdf-loading.show { display: flex; }
+
+    /* Expandable row styles */
+    .expanded-row { background: rgba(15, 23, 42, 0.5); }
+    .expanded-content { padding: 16px; background: #0b1220; border: 1px solid #1f2937; border-radius: 8px; margin: 4px 0 8px 0; }
+    .expanded-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+    .expanded-item { display: flex; flex-direction: column; }
+    .expanded-label { color: #94a3b8; font-size: 12px; margin-bottom: 4px; }
+    .expanded-value { color: #e5e7eb; font-size: 14px; }
+    .expanded-actions { display: flex; gap: 8px; margin-top: 12px; }
+
+    /* Department filter styling */
+    .department-filter-container {
+      position: relative;
+      min-width: 160px;
+    }
+    
+    .department-filter-select {
+      width: 100%;
+      background: #0b1220;
+      border: 1px solid #1f2937;
+      color: #e5e7eb;
+      border-radius: 10px;
+      padding: 10px 12px;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 12px;
+      padding-right: 32px;
+    }
+    
+    .department-filter-select option {
+      background: #0b1220;
+      color: #e5e7eb;
+      padding: 8px;
+    }
+    
+    .department-filter-select:focus {
+      border-color: #9ef01a;
+      box-shadow: 0 0 0 2px rgba(158, 240, 26, 0.2);
+    }
+    
+    /* Clear filter button */
+    .clear-filter-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 12px;
+      margin-left: 8px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    
+    .clear-filter-btn:hover {
+      color: #e5e7eb;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    
+    /* Filter badge */
+    .filter-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(158, 240, 26, 0.1);
+      border: 1px solid rgba(158, 240, 26, 0.3);
+      color: #9ef01a;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      margin-left: 8px;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Mobile Responsive Styles */
+    @media (max-width: 768px) {
+      .topbar {
+        padding: 12px 16px;
+        flex-wrap: wrap;
+      }
+      
+      .brand .logo {
+        width: 40px;
+        height: 40px;
+      }
+      
+      .brand .title {
+        font-size: 14px;
+      }
+      
+      .content {
+        margin: 16px auto;
+        padding: 0 16px;
+      }
+      
+      .card {
+        padding: 12px;
+      }
+      
+      .toolbar {
+        gap: 8px;
+        margin: 8px 0;
+      }
+      
+      .searchbar {
+        min-width: 100%;
+        order: 1;
+      }
+      
+      .filter-select, .sort-select, .department-filter-select {
+        flex: 1;
+        min-width: 120px;
+      }
+      
+      .btn {
+        padding: 8px 12px;
+        font-size: 14px;
+      }
+      
+      .table thead th {
+        padding: 8px 10px;
+        font-size: 11px;
+      }
+      
+      .table tbody td {
+        padding: 8px 10px;
+        font-size: 13px;
+      }
+      
+      /* Hide some columns on mobile */
+      .table thead th:nth-child(4), /* Gender */
+      .table thead th:nth-child(5), /* Class */
+      .table thead th:nth-child(8) { /* Created */
+        display: none;
+      }
+      
+      .table tbody td:nth-child(4), /* Gender */
+      .table tbody td:nth-child(5), /* Class */
+      .table tbody td:nth-child(8) { /* Created */
+        display: none;
+      }
+      
+      .expanded-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .expanded-actions {
+        flex-wrap: wrap;
+      }
+      
+      .expanded-actions .btn {
+        flex: 1;
+        min-width: 120px;
+      }
+      
+      .modal {
+        margin: 0 16px;
+      }
+      
+      .modal-body {
+        padding: 12px;
+      }
+      
+      .kv {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      
+      .kv .k {
+        font-size: 12px;
+      }
+      
+      .department-filter-container {
+        min-width: 100%;
+      }
+      
+      .filter-badge {
+        margin-left: 4px;
+        font-size: 11px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .topbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .brand {
+        width: 100%;
+        justify-content: space-between;
+      }
+      
+      .btn.ghost {
+        padding: 6px 10px;
+        font-size: 13px;
+      }
+      
+      .filter-select, .sort-select, .department-filter-select {
+        min-width: 100px;
+      }
+      
+      /* Hide Institution column on very small screens */
+      .table thead th:nth-child(6) { /* Institution */
+        display: none;
+      }
+      
+      .table tbody td:nth-child(6) { /* Institution */
+        display: none;
+      }
+    }
+
+    /* Sort select styling */
+    .sort-select {
+      background:#0b1220;
+      border:1px solid #1f2937;
+      color:#e5e7eb;
+      border-radius:10px;
+      padding:10px 12px;
+      outline:none;
+      min-width:140px;
+    }
+  </style>
+</head>
+<body class="auth-pending">
+  <!-- PDF Loading Overlay -->
+  <div id="pdfLoading" class="pdf-loading">
+    <div style="text-align: center;">
+      <div class="loading-spinner" style="margin: 0 auto 20px;"></div>
+      <div>Generating PDF... Please wait</div>
+    </div>
+  </div>
+
+  <div class="admin-shell">
+    <div class="topbar">
+      <div class="brand">
+        <img class="logo" src="../../images/logo.png" alt="SJR MUN" />
+        <h1 class="title">Admin Panel</h1>
+      </div>
+      <div>
+        <button id="logoutBtn" class="btn ghost">Logout</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="card">
+        <div class="toolbar">
+          <input id="searchInput" class="searchbar" type="text" placeholder="Search by form number, name, or phone" />
+          
+          <!-- Department Filter - NEW -->
+          <div class="department-filter-container">
+            <select id="departmentFilter" class="department-filter-select">
+              <option value="">All Departments</option>
+              <!-- Departments will be populated from data -->
+            </select>
+          </div>
+          
+          <!-- Existing Status Filter (keep if needed) -->
+          <select id="filterSelect" class="filter-select">
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          
+          <select id="sortSelect" class="sort-select">
+            <option value="">Sort By</option>
+            <option value="created_desc">Newest First</option>
+            <option value="created_asc">Oldest First</option>
+            <option value="name_asc">Name A-Z</option>
+            <option value="name_desc">Name Z-A</option>
+            <option value="gender">Gender</option>
+            <option value="class">Class</option>
+            <option value="department">Department A-Z</option>
+          </select>
+          
+          <!-- Clear Filters Button -->
+          <button id="clearFiltersBtn" class="btn ghost" style="display:none;">Clear Filters</button>
+          
+          <button id="refreshBtn" class="btn ghost">Refresh</button>
+          <button id="exportXlsxBtn" class="btn ghost">Export Excel</button>
+          <button id="exportPdfAllBtn" class="btn">Export All PDF</button>
+        </div>
+
+        <!-- Filter Status Display -->
+        <div id="filterStatus" style="margin: 8px 0; font-size: 12px; color: #94a3b8; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-height: 24px;">
+          <!-- Active filters will be displayed here -->
+        </div>
+
+        <div class="muted">Path: DB/records/{form-number}</div>
+
+        <div class="table-wrap">
+          <table class="table" id="recordsTable">
+            <thead>
+              <tr>
+                <th class="nowrap">Form #</th>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Gender</th>
+                <th>Class</th>
+                <th>Institution</th>
+                <th>Department</th>
+                <th class="nowrap">Created</th>
+                <th class="nowrap">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="recordsTbody">
+              <tr>
+                <td colspan="9">
+                  <div class="loading">
+                    <div class="loading-spinner"></div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="detailsPanel" class="details hidden"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail Modal -->
+  <div id="detailModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="modalTitle" style="margin:0;">Applicant Details</h3>
+        <button id="closeModalBtn" class="btn ghost">Close</button>
+      </div>
+      <div class="modal-body">
+        <div id="modalKV" class="kv"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase Configuration -->
+  <script type="module">
+    // Import Firebase modules
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+    import { 
+      getAuth, 
+      onAuthStateChanged, 
+      signOut, 
+      setPersistence, 
+      browserSessionPersistence,
+      browserLocalPersistence 
+    } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+    import { getFirestore, collection, getDocs, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+    
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDQ_ox-jKUM6ALhWrIymVrGRrDnBAb7bHE",
+      authDomain: "sjrmnuweb-3cac4.firebaseapp.com",
+      projectId: "sjrmnuweb-3cac4",
+      storageBucket: "sjrmnuweb-3cac4.firebasestorage.app",
+      messagingSenderId: "402828314003",
+      appId: "1:402828314003:web:eb48510e51d5f439b19466",
+      measurementId: "G-6D259WD4H6"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Department list from registration form - FIXED VERSION
+    const DEPARTMENTS = [
+      'Delegates affairs',
+      'Logistics',
+      'Hospitality',
+      'Sponsorship',
+      'Outreach',
+      'Social media',
+      'Designing',
+      'Researcher',
+      'Academia Ambassador',
+      'Organising team',
+      'Editor',
+      'Tech department (coding & web developer)',
+      'Graphic designer',
+      'Marketing Team'
+    ];
+
+    // Check if jsPDF is loaded
+    function checkJsPdfLoaded() {
+      if (typeof window.jspdf === 'undefined') {
+        console.error('jsPDF not loaded properly');
+        if (typeof window.jsPDF !== 'undefined') {
+          console.log('Found jsPDF in window.jsPDF');
+          return true;
+        }
+        return false;
+      }
+      if (typeof window.jspdf.jsPDF === 'undefined') {
+        console.error('jsPDF constructor not available in jspdf.jsPDF');
+        if (typeof window.jsPDF !== 'undefined') {
+          console.log('Found jsPDF in window.jsPDF');
+          return true;
+        }
+        return false;
+      }
+      return true;
+    }
+
+    // Get jsPDF constructor with fallbacks
+    function getJsPDF() {
+      if (typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF !== 'undefined') {
+        return window.jspdf.jsPDF;
+      }
+      if (typeof window.jsPDF !== 'undefined') {
+        return window.jsPDF;
+      }
+      if (typeof jspdf !== 'undefined' && typeof jspdf.jsPDF !== 'undefined') {
+        return jspdf.jsPDF;
+      }
+      throw new Error('jsPDF not found');
+    }
+
+    // Set persistence to LOCAL to maintain login state
+    async function initializeAuth() {
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+        console.log('[Auth] Persistence set to LOCAL');
+      } catch (error) {
+        console.error('[Auth] Persistence error:', error);
+        await setPersistence(auth, browserSessionPersistence);
+      }
+    }
+
+    // Toast notification system
+    function ensureToast(){
+      let el = document.getElementById('popup');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'popup';
+        el.className = 'toast';
+        el.innerHTML = '<span id="popupText"></span><button id="popupClose" class="btn ghost">Close</button>';
+        document.body.appendChild(el);
+        const close = el.querySelector('#popupClose');
+        close.addEventListener('click', () => { el.classList.remove('show','success','error'); });
+      }
+      return el;
+    }
+    
+    window.showToast = function(msg, kind='success'){
+      const el = ensureToast();
+      const text = el.querySelector('#popupText');
+      if (text) text.textContent = msg;
+      el.classList.remove('success','error');
+      el.classList.add('show', kind);
+      clearTimeout(el.__hideT);
+      el.__hideT = setTimeout(() => el.classList.remove('show','success','error'), 6000);
+    };
+
+    // DOM elements
+    const tbody = document.getElementById('recordsTbody');
+    const details = document.getElementById('detailsPanel');
+    const searchInput = document.getElementById('searchInput');
+    const departmentFilter = document.getElementById('departmentFilter');
+    const filterSelect = document.getElementById('filterSelect');
+    const sortSelect = document.getElementById('sortSelect');
+    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+    const filterStatus = document.getElementById('filterStatus');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const pdfLoading = document.getElementById('pdfLoading');
+
+    let allRecords = [];
+    let unsubscribe = null;
+    let authInitialized = false;
+    let expandedRowId = null;
+    let activeFilters = {
+      department: '',
+      status: '',
+      search: ''
+    };
+
+    // Initialize auth and set up state listener
+    async function initApp() {
+      try {
+        await initializeAuth();
+        authInitialized = true;
+        
+        onAuthStateChanged(auth, handleAuthStateChange, handleAuthError);
+      } catch (error) {
+        console.error('[App] Initialization error:', error);
+        showToast('Application initialization failed', 'error');
+      }
+    }
+
+    // Handle authentication state changes
+    function handleAuthStateChange(user) {
+      console.log('[Auth] State changed:', user ? 'User logged in' : 'No user');
+      
+      if (!user) { 
+        console.log('[Auth] Redirecting to login...');
+        window.location.href = '../'; 
+        return; 
+      }
+      
+      document.body.classList.remove('auth-pending');
+      console.log('[Auth] User authenticated:', user.email);
+      
+      initializeDepartmentFilter();
+      loadRecords();
+      setupRealtimeListener();
+    }
+
+    // Initialize department filter dropdown with unique departments from data
+    function initializeDepartmentFilter() {
+      // Clear existing options except "All Departments"
+      while (departmentFilter.options.length > 1) {
+        departmentFilter.remove(1);
+      }
+      
+      // Add all predefined departments
+      DEPARTMENTS.forEach(department => {
+        const option = document.createElement('option');
+        option.value = department;
+        option.textContent = department;
+        departmentFilter.appendChild(option);
+      });
+      
+      // Add "Multiple Departments" option
+      const multipleOption = document.createElement('option');
+      multipleOption.value = 'multiple';
+      multipleOption.textContent = 'Multiple Departments';
+      departmentFilter.appendChild(multipleOption);
+    }
+
+    // Extract unique departments from all records
+    function extractUniqueDepartments(records) {
+      const departmentsSet = new Set();
+      
+      records.forEach(record => {
+        if (record.department) {
+          // Split by comma and trim each department
+          const depts = record.department.split(',').map(d => d.trim());
+          depts.forEach(dept => {
+            if (dept) {
+              departmentsSet.add(dept);
+            }
+          });
+        }
+      });
+      
+      // Convert set to array and sort alphabetically
+      return Array.from(departmentsSet).sort((a, b) => a.localeCompare(b));
+    }
+
+    // Update department filter with unique values from data
+    function updateDepartmentFilterOptions() {
+      const uniqueDepartments = extractUniqueDepartments(allRecords);
+      
+      // Keep "All Departments" and "Multiple Departments" options
+      const currentValue = departmentFilter.value;
+      
+      // Remove all options except first two (All Departments and Multiple Departments)
+      while (departmentFilter.options.length > 2) {
+        departmentFilter.remove(2);
+      }
+      
+      // Add unique departments from data
+      uniqueDepartments.forEach(dept => {
+        // Check if this department is already in the predefined list
+        if (!DEPARTMENTS.includes(dept)) {
+          const option = document.createElement('option');
+          option.value = dept;
+          option.textContent = dept;
+          departmentFilter.appendChild(option);
+        }
+      });
+      
+      // Restore selected value if it still exists
+      if (currentValue) {
+        departmentFilter.value = currentValue;
+      }
+    }
+
+    // Handle authentication errors
+    function handleAuthError(error) {
+      console.error('[Auth] Auth state error:', error);
+      
+      if (error.code === 'auth/network-request-failed') {
+        showToast('Network error - check connection', 'error');
+        return;
+      }
+      
+      setTimeout(() => {
+        window.location.href = '../';
+      }, 2000);
+    }
+
+    // Setup real-time listener for new records
+    function setupRealtimeListener() {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+      
+      try {
+        const q = query(collection(db, 'records'), orderBy('created_at', 'desc'));
+        unsubscribe = onSnapshot(q, 
+          (snapshot) => {
+            console.log('[Admin] Realtime update received');
+            loadRecords();
+          }, 
+          (error) => {
+            console.error('[Admin] Realtime listener error:', error);
+            if (!error.message.includes('unavailable')) {
+              showToast('Error connecting to database', 'error');
+            }
+          }
+        );
+      } catch (error) {
+        console.error('[Admin] Realtime setup error:', error);
+      }
+    }
+
+    // Logout handler
+    logoutBtn.addEventListener('click', async () => {
+      try {
+        if (unsubscribe) {
+          unsubscribe();
+        }
+        await signOut(auth);
+      } catch (error) {
+        console.error('Logout error:', error);
+        showToast('Error during logout', 'error');
+      }
+    });
+
+    // Refresh button handler
+    document.getElementById('refreshBtn').addEventListener('click', loadRecords);
+
+    // Search functionality
+    searchInput.addEventListener('input', () => {
+      activeFilters.search = searchInput.value;
+      updateFilterStatus();
+      renderRows(filterAndSortRecords());
+    });
+
+    // Department filter functionality
+    departmentFilter.addEventListener('change', () => {
+      activeFilters.department = departmentFilter.value;
+      updateFilterStatus();
+      renderRows(filterAndSortRecords());
+    });
+
+    // Status filter functionality
+    filterSelect.addEventListener('change', () => {
+      activeFilters.status = filterSelect.value;
+      updateFilterStatus();
+      renderRows(filterAndSortRecords());
+    });
+
+    // Sort functionality
+    sortSelect.addEventListener('change', () => renderRows(filterAndSortRecords()));
+
+    // Clear all filters
+    clearFiltersBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      departmentFilter.value = '';
+      filterSelect.value = '';
+      sortSelect.value = '';
+      
+      activeFilters = {
+        department: '',
+        status: '',
+        search: ''
+      };
+      
+      updateFilterStatus();
+      renderRows(filterAndSortRecords());
+    });
+
+    // Update filter status display
+    function updateFilterStatus() {
+      const activeFilterCount = Object.values(activeFilters).filter(val => val).length;
+      
+      // Show/hide clear filters button
+      clearFiltersBtn.style.display = activeFilterCount > 0 ? 'inline-block' : 'none';
+      
+      // Update filter status display
+      filterStatus.innerHTML = '';
+      
+      if (activeFilterCount === 0) {
+        filterStatus.textContent = 'No filters applied';
+        return;
+      }
+      
+      if (activeFilters.search) {
+        const badge = document.createElement('span');
+        badge.className = 'filter-badge';
+        badge.innerHTML = `Search: "${activeFilters.search}" <button class="clear-filter-btn" data-clear="search">×</button>`;
+        filterStatus.appendChild(badge);
+      }
+      
+      if (activeFilters.department) {
+        const badge = document.createElement('span');
+        badge.className = 'filter-badge';
+        const displayText = activeFilters.department === 'multiple' ? 'Multiple Departments' : activeFilters.department;
+        badge.innerHTML = `Department: ${displayText} <button class="clear-filter-btn" data-clear="department">×</button>`;
+        filterStatus.appendChild(badge);
+      }
+      
+      if (activeFilters.status) {
+        const badge = document.createElement('span');
+        badge.className = 'filter-badge';
+        badge.innerHTML = `Status: ${activeFilters.status} <button class="clear-filter-btn" data-clear="status">×</button>`;
+        filterStatus.appendChild(badge);
+      }
+      
+      // Add event listeners to clear buttons
+      filterStatus.querySelectorAll('.clear-filter-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const filterType = btn.getAttribute('data-clear');
+          
+          switch(filterType) {
+            case 'search':
+              searchInput.value = '';
+              activeFilters.search = '';
+              break;
+            case 'department':
+              departmentFilter.value = '';
+              activeFilters.department = '';
+              break;
+            case 'status':
+              filterSelect.value = '';
+              activeFilters.status = '';
+              break;
+          }
+          
+          updateFilterStatus();
+          renderRows(filterAndSortRecords());
+        });
+      });
+    }
+
+    // Filter and sort records
+    function filterAndSortRecords() {
+      let filtered = filterRecords();
+      return sortRecords(filtered);
+    }
+
+    // Filter records based on active filters
+    function filterRecords() {
+      const searchTerm = (activeFilters.search || '').toLowerCase().trim();
+      const departmentValue = activeFilters.department;
+      const statusValue = activeFilters.status;
+      
+      console.log(`Filtering - Search: "${searchTerm}", Department: "${departmentValue}", Status: "${statusValue}"`);
+      
+      return allRecords.filter(r => {
+        // Search filter
+        const matchesSearch = !searchTerm || 
+          (r.id || '').toLowerCase().includes(searchTerm) ||
+          (r.full_name || '').toLowerCase().includes(searchTerm) ||
+          (r.phone || '').toLowerCase().includes(searchTerm) ||
+          (r.institute || '').toLowerCase().includes(searchTerm);
+        
+        // Department filter - HANDLES MULTIPLE DEPARTMENTS IN SAME FIELD
+        let matchesDepartment = true;
+        if (departmentValue) {
+          if (departmentValue === 'multiple') {
+            // Filter for records with multiple departments
+            const departments = (r.department || '').split(',').map(d => d.trim());
+            matchesDepartment = departments.length > 1;
+          } else {
+            // Filter for specific department
+            const recordDepartments = (r.department || '').split(',').map(d => d.trim());
+            matchesDepartment = recordDepartments.some(dept => 
+              dept.toLowerCase() === departmentValue.toLowerCase()
+            );
+          }
+        }
+        
+        // Status filter (if you have a status field)
+        let matchesStatus = true;
+        if (statusValue && r.status) {
+          matchesStatus = r.status.toLowerCase() === statusValue.toLowerCase();
+        } else if (statusValue && !r.status) {
+          // If filtering by status but record doesn't have status field
+          matchesStatus = false;
+        }
+        
+        return matchesSearch && matchesDepartment && matchesStatus;
+      });
+    }
+
+    // Sort records based on selected option
+    function sortRecords(records) {
+      const sortValue = sortSelect.value;
+      
+      switch(sortValue) {
+        case 'created_desc':
+          return records.sort((a, b) => {
+            const dateA = a.created_at?.toDate?.() || new Date(a.created_at);
+            const dateB = b.created_at?.toDate?.() || new Date(b.created_at);
+            return dateB - dateA;
+          });
+          
+        case 'created_asc':
+          return records.sort((a, b) => {
+            const dateA = a.created_at?.toDate?.() || new Date(a.created_at);
+            const dateB = b.created_at?.toDate?.() || new Date(b.created_at);
+            return dateA - dateB;
+          });
+          
+        case 'name_asc':
+          return records.sort((a, b) => 
+            (a.full_name || '').localeCompare(b.full_name || '')
+          );
+          
+        case 'name_desc':
+          return records.sort((a, b) => 
+            (b.full_name || '').localeCompare(a.full_name || '')
+          );
+          
+        case 'gender':
+          return records.sort((a, b) => {
+            const genderOrder = { 'Male': 1, 'Female': 2, 'Other': 3 };
+            const orderA = genderOrder[a.gender] || 4;
+            const orderB = genderOrder[b.gender] || 4;
+            return orderA - orderB || (a.full_name || '').localeCompare(b.full_name || '');
+          });
+          
+        case 'class':
+          return records.sort((a, b) => {
+            const extractNumber = (str) => {
+              if (!str) return 0;
+              const match = str.toString().match(/\d+/);
+              return match ? parseInt(match[0]) : 0;
+            };
+            
+            const numA = extractNumber(a.class);
+            const numB = extractNumber(b.class);
+            
+            if (numA !== numB) {
+              return numA - numB;
+            }
+            
+            return (a.class || '').localeCompare(b.class || '');
+          });
+          
+        case 'department':
+          return records.sort((a, b) => {
+            const deptA = (a.department || '').split(',')[0].trim();
+            const deptB = (b.department || '').split(',')[0].trim();
+            return deptA.localeCompare(deptB) || (a.full_name || '').localeCompare(b.full_name || '');
+          });
+          
+        default:
+          return records;
+      }
+    }
+
+    // Load records from Firestore
+    async function loadRecords() {
+      try {
+        tbody.innerHTML = '<tr><td colspan="9"><div class="loading"><div class="loading-spinner"></div></div></td></tr>';
+        
+        console.log('[Admin] Fetching records...');
+        const qy = query(collection(db, 'records'), orderBy('created_at', 'desc'));
+        const snap = await getDocs(qy);
+        allRecords = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        console.log(`[Admin] Loaded ${allRecords.length} records`);
+        
+        // Update department filter options with unique values from data
+        updateDepartmentFilterOptions();
+        
+        renderRows(filterAndSortRecords());
+        
+      } catch (err) {
+        console.error('[Admin] Failed to load records:', err);
+        tbody.innerHTML = '<tr><td colspan="9">Failed to load records. Please refresh.</td></tr>';
+        
+        if (!err.message.includes('unavailable')) {
+          showToast('Failed to load records', 'error');
+        }
+      }
+    }
+
+    // Render table rows with department badges for multiple departments
+    function renderRows(rows) {
+      tbody.innerHTML = '';
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="9">No records found</td></tr>';
+        return;
+      }
+      
+      for (const r of rows) {
+        const tr = document.createElement('tr');
+        const isExpanded = expandedRowId === r.id;
+        
+        // Parse departments for display
+        const departments = (r.department || '').split(',').map(d => d.trim()).filter(d => d);
+        const hasMultipleDepartments = departments.length > 1;
+        
+        // Create department display with badges for multiple departments
+        let departmentDisplay = '';
+        if (hasMultipleDepartments) {
+          departmentDisplay = `<div style="display: flex; flex-wrap: wrap; gap: 4px; max-width: 200px;">
+            ${departments.map(dept => 
+              `<span style="background: rgba(158,240,26,0.1); color: #9ef01a; padding: 2px 6px; border-radius: 4px; font-size: 11px; border: 1px solid rgba(158,240,26,0.3);">${escapeHtml(dept)}</span>`
+            ).join('')}
+          </div>`;
+        } else {
+          departmentDisplay = escapeHtml(r.department || '');
+        }
+        
+        tr.innerHTML = `
+          <td class="nowrap">${r.id}</td>
+          <td>${escapeHtml(r.full_name)}</td>
+          <td>${escapeHtml(r.phone)}</td>
+          <td>${escapeHtml(r.gender || '')}</td>
+          <td>${escapeHtml(r.class || '')}</td>
+          <td>${escapeHtml(r.institute)}</td>
+          <td>${departmentDisplay}</td>
+          <td class="nowrap">${formatDate(r.created_at)}</td>
+          <td class="nowrap">
+            <button class="btn ghost" data-view="${r.id}">View</button>
+            <button class="btn" data-pdf="${r.id}">PDF</button>
+          </td>`;
+        tbody.appendChild(tr);
+        
+        // Add expanded row if this is the expanded row
+        if (isExpanded) {
+          const expandTr = document.createElement('tr');
+          expandTr.className = 'expanded-row';
+          
+          // Display all departments in expanded view
+          const expandedDeptHTML = departments.map(dept => 
+            `<span style="background: rgba(158,240,26,0.1); color: #9ef01a; padding: 4px 8px; border-radius: 6px; font-size: 12px; border: 1px solid rgba(158,240,26,0.3); display: inline-block; margin: 2px;">${escapeHtml(dept)}</span>`
+          ).join(' ');
+          
+          expandTr.innerHTML = `
+            <td colspan="9">
+              <div class="expanded-content">
+                <div class="expanded-grid">
+                  <div class="expanded-item">
+                    <div class="expanded-label">Father's Name</div>
+                    <div class="expanded-value">${escapeHtml(r.father_name || '')}</div>
+                  </div>
+                  <div class="expanded-item">
+                    <div class="expanded-label">Mother's Name</div>
+                    <div class="expanded-value">${escapeHtml(r.mother_name || '')}</div>
+                  </div>
+                  <div class="expanded-item">
+                    <div class="expanded-label">Date of Birth</div>
+                    <div class="expanded-value">${escapeHtml(r.dob || '')}</div>
+                  </div>
+                  <div class="expanded-item">
+                    <div class="expanded-label">Email</div>
+                    <div class="expanded-value">${escapeHtml(r.email || '')}</div>
+                  </div>
+                  <div class="expanded-item">
+                    <div class="expanded-label">Address</div>
+                    <div class="expanded-value">${escapeHtml(r.address || '')}</div>
+                  </div>
+                  <div class="expanded-item">
+                    <div class="expanded-label">Landmark</div>
+                    <div class="expanded-value">${escapeHtml(r.landmark || '')}</div>
+                  </div>
+                  <div class="expanded-item">
+                    <div class="expanded-label">City</div>
+                    <div class="expanded-value">${escapeHtml(r.city || '')}</div>
+                  </div>
+                  <div class="expanded-item">
+                    <div class="expanded-label">Departments</div>
+                    <div class="expanded-value" style="margin-top: 4px;">${expandedDeptHTML}</div>
+                  </div>
+                </div>
+                <div class="expanded-actions">
+                  <button class="btn" data-fullpdf="${r.id}">Download Full PDF</button>
+                  <button class="btn ghost" data-more="${r.id}">More Details</button>
+                  <button class="btn ghost" data-close="${r.id}">Close</button>
+                </div>
+              </div>
+            </td>`;
+          tbody.appendChild(expandTr);
+        }
+      }
+
+      // Add event listeners to buttons
+      tbody.querySelectorAll('[data-view]').forEach(btn => btn.addEventListener('click', (e) => {
+        const id = e.currentTarget.getAttribute('data-view');
+        
+        // Toggle expanded row
+        if (expandedRowId === id) {
+          expandedRowId = null;
+        } else {
+          expandedRowId = id;
+        }
+        
+        renderRows(filterAndSortRecords());
+      }));
+
+      tbody.querySelectorAll('[data-pdf]').forEach(btn => btn.addEventListener('click', (e) => {
+        const id = e.currentTarget.getAttribute('data-pdf');
+        const rec = allRecords.find(x => x.id === id);
+        downloadRecordPdf(rec);
+      }));
+
+      // Add event listeners for expanded row buttons
+      tbody.querySelectorAll('[data-fullpdf]').forEach(btn => btn.addEventListener('click', (e) => {
+        const id = e.currentTarget.getAttribute('data-fullpdf');
+        const rec = allRecords.find(x => x.id === id);
+        downloadRecordPdf(rec);
+      }));
+
+      tbody.querySelectorAll('[data-more]').forEach(btn => btn.addEventListener('click', (e) => {
+        const id = e.currentTarget.getAttribute('data-more');
+        const rec = allRecords.find(x => x.id === id);
+        openDetailModal(rec);
+      }));
+
+      tbody.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', (e) => {
+        expandedRowId = null;
+        renderRows(filterAndSortRecords());
+      }));
+    }
+
+    // Utility functions
+    function escapeHtml(s='') {
+      return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    }
+
+    function formatDate(ts) {
+      try {
+        if (ts && ts.toDate) return ts.toDate().toLocaleString();
+      } catch {}
+      return ts || '';
+    }
+
+    function recordToLines(r) {
+      return [
+        ['Form #', r.id],
+        ['Full Name', r.full_name],
+        ["Father's Name", r.father_name],
+        ["Mother's Name", r.mother_name],
+        ['Gender', r.gender],
+        ['DOB', r.dob],
+        ['Institute', r.institute],
+        ['Class', r.class],
+        ['Phone', r.phone],
+        ['Email', r.email],
+        ['Address', r.address],
+        ['Landmark', r.landmark],
+        ['City', r.city],
+        ['Department', r.department],
+        ['Created', formatDate(r.created_at)],
+      ];
+    }
+
+    // Show details panel
+    function showDetails(r) {
+      if (!r) return;
+      details.classList.remove('hidden');
+      details.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+          <h3 style="margin:0;">Form #${escapeHtml(r.id)}</h3>
+          <div>
+            <button class="btn" id="detailPdfBtn">Download PDF</button>
+            <button class="btn ghost" id="viewMoreBtn">View More</button>
+            <button class="btn ghost" id="closeDetailsBtn">Close</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px;">
+          ${detailRow('Full Name', r.full_name)}
+          ${detailRow("Father's Name", r.father_name)}
+          ${detailRow("Mother's Name", r.mother_name)}
+          ${detailRow('Gender', r.gender)}
+          ${detailRow('DOB', r.dob)}
+          ${detailRow('Institute', r.institute)}
+          ${detailRow('Class', r.class)}
+          ${detailRow('Phone', r.phone)}
+          ${detailRow('Email', r.email)}
+          ${detailRow('Address', r.address)}
+          ${detailRow('Landmark', r.landmark)}
+          ${detailRow('City', r.city)}
+          ${detailRow('Department', r.department)}
+          ${detailRow('Created', formatDate(r.created_at))}
+        </div>`;
+      document.getElementById('detailPdfBtn').onclick = () => downloadRecordPdf(r);
+      document.getElementById('viewMoreBtn').onclick = () => openDetailModal(r);
+      document.getElementById('closeDetailsBtn').onclick = () => {
+        details.classList.add('hidden');
+      };
+    }
+
+    function detailRow(label, value) {
+      return `<div><div class="muted">${escapeHtml(label)}</div><div>${escapeHtml(value||'')}</div></div>`;
+    }
+
+    // Modal functions
+    function openDetailModal(r) {
+      const overlay = document.getElementById('detailModal');
+      const modalKV = document.getElementById('modalKV');
+      const title = document.getElementById('modalTitle');
+      title.textContent = `Applicant – Form #${r.form_number || r.id}`;
+      const rows = recordToLines(r);
+      modalKV.innerHTML = rows.map(([k,v]) => `<div class="k">${escapeHtml(k)}</div><div>${escapeHtml(v||'')}</div>`).join('');
+      overlay.style.display = 'flex';
+    }
+
+    document.getElementById('closeModalBtn').addEventListener('click', () => {
+      document.getElementById('detailModal').style.display = 'none';
+    });
+
+    document.getElementById('detailModal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) e.currentTarget.style.display = 'none';
+    });
+
+    // PDF generation functions
+    function downloadRecordPdf(r) {
+      if (!r) {
+        showToast('No record data available', 'error');
+        return;
+      }
+      
+      try {
+        pdfLoading.classList.add('show');
+        
+        const jsPDF = getJsPDF();
+        const doc = new jsPDF();
+        
+        let y = 20;
+        
+        doc.setFontSize(16);
+        doc.text('SJR MUN REGISTRATION', 105, y, { align: 'center' });
+        y += 10;
+        
+        doc.setFontSize(12);
+        doc.text(`Form #: ${r.id}`, 20, y);
+        y += 15;
+        
+        const lines = recordToLines(r);
+        for (const [k, v] of lines) {
+          if (k === 'Form #') continue;
+          
+          const text = `${k}: ${v || 'N/A'}`;
+          doc.text(text, 20, y);
+          y += 8;
+          
+          if (y > 270) {
+            doc.addPage();
+            y = 20;
+          }
+        }
+        
+        setTimeout(() => {
+          doc.save(`sjr_mun_form_${r.id}.pdf`);
+          pdfLoading.classList.remove('show');
+          showToast(`PDF for ${r.id} downloaded successfully`, 'success');
+        }, 500);
+        
+      } catch (error) {
+        console.error('PDF generation error:', error);
+        pdfLoading.classList.remove('show');
+        showToast('Error generating PDF: ' + error.message, 'error');
+      }
+    }
+
+    // Export All PDF function
+    document.getElementById('exportPdfAllBtn').addEventListener('click', () => {
+      if (!allRecords.length) {
+        showToast('No data to export', 'error');
+        return;
+      }
+      
+      try {
+        pdfLoading.classList.add('show');
+        
+        const jsPDF = getJsPDF();
+        const doc = new jsPDF();
+        
+        let y = 20;
+        
+        doc.setFontSize(16);
+        doc.text('SJR MUN - ALL REGISTRATIONS', 105, y, { align: 'center' });
+        y += 15;
+        
+        allRecords.forEach((r, index) => {
+          if (index > 0) {
+            doc.addPage();
+            y = 20;
+          }
+          
+          doc.setFontSize(12);
+          doc.text(`Form #${r.id} - ${r.full_name}`, 20, y);
+          y += 10;
+          
+          const lines = recordToLines(r);
+          doc.setFontSize(10);
+          
+          for (const [k, v] of lines) {
+            if (k === 'Form #') continue;
+            
+            const text = `${k}: ${v || 'N/A'}`;
+            doc.text(text, 20, y);
+            y += 6;
+            
+            if (y > 270) {
+              doc.addPage();
+              y = 20;
+            }
+          }
+          
+          if (index < allRecords.length - 1) {
+            y += 5;
+            doc.line(20, y, 190, y);
+            y += 10;
+          }
+        });
+        
+        setTimeout(() => {
+          doc.save('sjr_mun_all_registrations.pdf');
+          pdfLoading.classList.remove('show');
+          showToast(`All ${allRecords.length} records exported as PDF`, 'success');
+        }, 1000);
+        
+      } catch (error) {
+        console.error('All PDF export error:', error);
+        pdfLoading.classList.remove('show');
+        showToast('Error exporting all records as PDF: ' + error.message, 'error');
+      }
+    });
+
+    // Excel export
+    document.getElementById('exportXlsxBtn').addEventListener('click', async () => {
+      if (!allRecords.length) return showToast('No data to export', 'error');
+      
+      try {
+        const data = allRecords.map(r => ({
+          form_number: r.id,
+          full_name: r.full_name,
+          father_name: r.father_name,
+          mother_name: r.mother_name,
+          gender: r.gender,
+          dob: r.dob,
+          institute: r.institute,
+          class: r.class,
+          phone: r.phone,
+          email: r.email,
+          address: r.address,
+          landmark: r.landmark,
+          city: r.city,
+          department: r.department,
+          created_at: formatDate(r.created_at)
+        }));
+        
+        const XLSX = await import("https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm");
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Registrations');
+        XLSX.writeFile(wb, 'sjr_mun_registrations.xlsx');
+        showToast('Records exported as Excel', 'success');
+      } catch (error) {
+        console.error('Excel export error:', error);
+        showToast('Error exporting Excel file', 'error');
+      }
+    });
+
+    // Initialize the application
+    initApp();
+  </script>
+</body>
+</html>
