@@ -205,6 +205,17 @@
       outline:none;
       min-width:140px;
     }
+
+    /* Gender filter styling */
+    .gender-filter {
+      background:#0b1220;
+      border:1px solid #1f2937;
+      color:#e5e7eb;
+      border-radius:10px;
+      padding:10px 12px;
+      outline:none;
+      min-width:140px;
+    }
   </style>
 </head>
 <body class="auth-pending">
@@ -231,7 +242,7 @@
       <div class="card">
         <div class="toolbar">
           <input id="searchInput" class="searchbar" type="text" placeholder="Search by form number, name, or phone" />
-          <select id="filterSelect" class="filter-select">
+          <select id="departmentFilter" class="filter-select">
             <option value="">All Departments</option>
             <!-- Departments will be populated from the registration form data -->
             <option value="Delegates affairs">Delegates affairs</option>
@@ -249,13 +260,18 @@
             <option value="Graphic designer">Graphic designer</option>
             <option value="Marketing Team">Marketing Team</option>
           </select>
+          <select id="genderFilter" class="gender-filter">
+            <option value="">All Genders</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </select>
           <select id="sortSelect" class="sort-select">
             <option value="">Sort By</option>
             <option value="created_desc">Newest First</option>
             <option value="created_asc">Oldest First</option>
             <option value="name_asc">Name A-Z</option>
             <option value="name_desc">Name Z-A</option>
-            <option value="gender">Gender</option>
             <option value="class">Class</option>
             <option value="department">Department A-Z</option>
           </select>
@@ -343,19 +359,19 @@
 
     // Department list from registration form
     const DEPARTMENTS = [
-      'Delegates affairs',
+      'Delegates Affairs',
       'Logistics',
       'Hospitality',
       'Sponsorship',
       'Outreach',
-      'Social media',
+      'Social Media',
       'Designing',
       'Researcher',
       'Academia Ambassador',
-      'Organising team',
+      'Organising Team',
       'Editor',
-      'Tech department (coding & web developer)',
-      'Graphic designer',
+      'Tech Department',
+      'Graphic Designer',
       'Marketing Team'
     ];
 
@@ -438,7 +454,8 @@
     const tbody = document.getElementById('recordsTbody');
     const details = document.getElementById('detailsPanel');
     const searchInput = document.getElementById('searchInput');
-    const filterSelect = document.getElementById('filterSelect');
+    const departmentFilter = document.getElementById('departmentFilter');
+    const genderFilter = document.getElementById('genderFilter');
     const sortSelect = document.getElementById('sortSelect');
     const logoutBtn = document.getElementById('logoutBtn');
     const pdfLoading = document.getElementById('pdfLoading');
@@ -486,8 +503,8 @@
     // Initialize department filter dropdown with all available departments
     function initializeDepartmentFilter() {
       // Clear existing options except "All Departments"
-      while (filterSelect.options.length > 1) {
-        filterSelect.remove(1);
+      while (departmentFilter.options.length > 1) {
+        departmentFilter.remove(1);
       }
       
       // Add all departments from the predefined list
@@ -495,7 +512,7 @@
         const option = document.createElement('option');
         option.value = department;
         option.textContent = department;
-        filterSelect.appendChild(option);
+        departmentFilter.appendChild(option);
       });
     }
 
@@ -562,9 +579,15 @@
     // Search functionality
     searchInput.addEventListener('input', () => renderRows(filterAndSortRecords()));
 
-    // Filter functionality
-    filterSelect.addEventListener('change', () => {
-      console.log(`Filtering by department: ${filterSelect.value}`);
+    // Department filter functionality
+    departmentFilter.addEventListener('change', () => {
+      console.log(`Filtering by department: ${departmentFilter.value}`);
+      renderRows(filterAndSortRecords());
+    });
+
+    // Gender filter functionality
+    genderFilter.addEventListener('change', () => {
+      console.log(`Filtering by gender: ${genderFilter.value}`);
       renderRows(filterAndSortRecords());
     });
 
@@ -577,12 +600,13 @@
       return sortRecords(filtered);
     }
 
-    // Filter records based on search and filter
+    // Filter records based on search, department, and gender
     function filterRecords() {
       const searchTerm = (searchInput.value || '').toLowerCase().trim();
-      const filterValue = filterSelect.value;
+      const departmentValue = departmentFilter.value;
+      const genderValue = genderFilter.value;
       
-      console.log(`Filtering - Search: "${searchTerm}", Department: "${filterValue}"`);
+      console.log(`Filtering - Search: "${searchTerm}", Department: "${departmentValue}", Gender: "${genderValue}"`);
       
       return allRecords.filter(r => {
         // Search filter
@@ -593,15 +617,21 @@
           (r.institute || '').toLowerCase().includes(searchTerm);
         
         // Department filter
-        let matchesFilter = true;
-        if (filterValue) {
+        let matchesDepartment = true;
+        if (departmentValue) {
           // Check if the record's department contains the filter value
           // Since departments can have multiple values separated by commas
           const recordDepartments = (r.department || '').split(',').map(d => d.trim());
-          matchesFilter = recordDepartments.some(dept => dept === filterValue);
+          matchesDepartment = recordDepartments.some(dept => dept === departmentValue);
         }
         
-        return matchesSearch && matchesFilter;
+        // Gender filter
+        let matchesGender = true;
+        if (genderValue) {
+          matchesGender = (r.gender || '').toLowerCase() === genderValue.toLowerCase();
+        }
+        
+        return matchesSearch && matchesDepartment && matchesGender;
       });
     }
 
@@ -633,14 +663,6 @@
           return records.sort((a, b) => 
             (b.full_name || '').localeCompare(a.full_name || '')
           );
-          
-        case 'gender':
-          return records.sort((a, b) => {
-            const genderOrder = { 'Male': 1, 'Female': 2, 'Other': 3 };
-            const orderA = genderOrder[a.gender] || 4;
-            const orderB = genderOrder[b.gender] || 4;
-            return orderA - orderB || (a.full_name || '').localeCompare(b.full_name || '');
-          });
           
         case 'class':
           return records.sort((a, b) => {
@@ -1028,7 +1050,7 @@
         pdfLoading.classList.remove('show');
         showToast('Error exporting all records as PDF: ' + error.message, 'error');
       }
-    });
+    }
 
     // Excel export
     document.getElementById('exportXlsxBtn').addEventListener('click', async () => {
