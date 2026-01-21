@@ -255,7 +255,6 @@
             <option value="created_asc">Oldest First</option>
             <option value="name_asc">Name A-Z</option>
             <option value="name_desc">Name Z-A</option>
-            <option value="gender">Gender</option>
             <option value="class">Class</option>
             <option value="department">Department A-Z</option>
           </select>
@@ -343,19 +342,19 @@
 
     // Department list from registration form
     const DEPARTMENTS = [
-      'Delegates affairs',
+      'Delegates Affairs',
       'Logistics',
       'Hospitality',
       'Sponsorship',
       'Outreach',
-      'Social media',
+      'Social Media',
       'Designing',
       'Researcher',
       'Academia Ambassador',
-      'Organising team',
+      'Organising Team',
       'Editor',
-      'Tech department (coding & web developer)',
-      'Graphic designer',
+      'Tech Department',
+      'Graphic Designer',
       'Marketing Team'
     ];
 
@@ -633,14 +632,6 @@
           return records.sort((a, b) => 
             (b.full_name || '').localeCompare(a.full_name || '')
           );
-          
-        case 'gender':
-          return records.sort((a, b) => {
-            const genderOrder = { 'Male': 1, 'Female': 2, 'Other': 3 };
-            const orderA = genderOrder[a.gender] || 4;
-            const orderB = genderOrder[b.gender] || 4;
-            return orderA - orderB || (a.full_name || '').localeCompare(b.full_name || '');
-          });
           
         case 'class':
           return records.sort((a, b) => {
@@ -1028,7 +1019,7 @@
         pdfLoading.classList.remove('show');
         showToast('Error exporting all records as PDF: ' + error.message, 'error');
       }
-    });
+    }
 
     // Excel export
     document.getElementById('exportXlsxBtn').addEventListener('click', async () => {
