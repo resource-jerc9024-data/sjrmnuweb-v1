@@ -684,7 +684,8 @@
         let matchesDept = true;
         if (selectedDepartments.length > 0) {
           const recordDepartmentsLC = (r.department || '')
-            .split(',')
+            .split(/[;,]/)
+            .map(d => d.replace(/^\s*["']?|["']?\s*$/g, ''))
             .map(d => d.trim().toLowerCase())
             .filter(Boolean);
           const selectedDepartmentsLC = selectedDepartments.map(d => d.toLowerCase());
@@ -695,7 +696,7 @@
         // Gender filter
         let matchesGender = true;
         if (genderValue) {
-          matchesGender = (r.gender || '') === genderValue;
+          matchesGender = ((r.gender || '').toLowerCase() === genderValue.toLowerCase());
         }
         
         return matchesSearch && matchesDept && matchesGender;
