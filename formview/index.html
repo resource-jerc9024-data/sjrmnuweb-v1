@@ -572,6 +572,12 @@
               <input type="text" name="department" id="edit_department" placeholder="Department" required />
               <div class="error-message">Please enter department</div>
             </label>
+
+            <label class="field span-2">
+              <span>Aadhar Number (Optional)</span>
+              <input type="text" name="aadhar" id="edit_aadhar" placeholder="12-digit Aadhar number" pattern="[0-9]{12}" inputmode="numeric" />
+              <div class="error-message">Please enter valid 12-digit Aadhar number</div>
+            </label>
           </div>
           <div class="actions">
             <button type="submit" class="btn primary" id="updateBtn">
@@ -870,7 +876,8 @@
         ['Address', record.address || 'Not provided'],
         ['Landmark', record.landmark || 'Not provided'],
         ['City', record.city || 'Not provided'],
-        ['Department', record.department || 'Not provided']
+        ['Department', record.department || 'Not provided'],
+        ['Aadhar Number', record.aadhar || 'Not provided']
       ];
       
       entries.forEach(([key, value]) => {
@@ -912,6 +919,7 @@
       document.getElementById('edit_landmark').value = currentRecord.landmark || '';
       document.getElementById('edit_city').value = currentRecord.city || '';
       document.getElementById('edit_department').value = currentRecord.department || '';
+      document.getElementById('edit_aadhar').value = currentRecord.aadhar || '';
       
       // Set gender radio button
       const genderRadios = document.querySelectorAll('input[name="gender"]');
@@ -949,6 +957,12 @@
         return;
       }
       
+      // Aadhar validation (optional but if provided, must be 12 digits)
+      if (data.aadhar && !/^[0-9]{12}$/.test(data.aadhar)) {
+        showToast('Aadhar number must be 12 digits if provided.', 'error');
+        return;
+      }
+      
       updateBtn.disabled = true;
       const originalText = updateBtn.textContent;
       updateBtn.innerHTML = '<span class="loading-spinner"></span> Updating...';
@@ -963,6 +977,7 @@
           ...data,
           email: data.email.toLowerCase().trim(),
           phone: data.phone.trim(),
+          aadhar: data.aadhar ? data.aadhar.trim() : '',
           updated_at: new Date().toISOString()
         };
         
@@ -1037,7 +1052,8 @@
         ['Address', record.address],
         ['Landmark', record.landmark],
         ['City', record.city],
-        ['Department', record.department]
+        ['Department', record.department],
+        ['Aadhar Number', record.aadhar || 'Not provided']
       ];
       
       for (const [key, value] of pairs) {
