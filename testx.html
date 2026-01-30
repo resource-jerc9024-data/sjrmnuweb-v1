@@ -390,9 +390,9 @@
           </label>
 
           <label class="field">
-            <span>Landmark <span style="color:#ef4444">*</span></span>
-            <input type="text" name="landmark" placeholder="Landmark" autocomplete="landmark" required />
-            <div class="error-message">Please enter a landmark</div>
+            <span>Landmark</span>
+            <input type="text" name="landmark" placeholder="Landmark (Optional)" autocomplete="landmark" />
+            <div class="error-message" style="display:none"></div>
           </label>
 
           <label class="field">
@@ -1160,7 +1160,7 @@
               phone: data.phone.trim() || '',
               email: data.email.toLowerCase().trim() || '',
               address: data.address || '',
-              landmark: data.landmark || '',
+              landmark: data.landmark || '', // Optional field
               city: data.city || '',
               department: data.department || '',
               created_at: serverTimestamp()
