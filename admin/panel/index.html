@@ -240,7 +240,7 @@
     <div class="content">
       <div class="card">
         <div class="toolbar">
-          <input id="searchInput" class="searchbar" type="text" placeholder="Search by form number, name, or phone" />
+          <input id="searchInput" class="searchbar" type="text" placeholder="Search by form number, name, phone, or Aadhar" />
           <div class="multi-filter" id="deptFilterWrap">
             <button type="button" id="deptToggle" class="btn-toggle">Departments (All)</button>
             <div class="popover" id="deptPopover" aria-hidden="true">
@@ -288,6 +288,7 @@
                 <th class="nowrap">Form #</th>
                 <th>Name</th>
                 <th>Phone</th>
+                <th>Aadhar</th>
                 <th>Gender</th>
                 <th>Class</th>
                 <th>Institution</th>
@@ -298,7 +299,7 @@
             </thead>
             <tbody id="recordsTbody">
               <tr>
-                <td colspan="9">
+                <td colspan="10">
                   <div class="loading">
                     <div class="loading-spinner"></div>
                   </div>
@@ -356,7 +357,7 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // Department list from registration form
+    // Department list from registration form (including Video Crew)
     const DEPARTMENTS = [
       'Delegates Affairs',
       'Logistics',
@@ -371,7 +372,8 @@
       'Editor',
       'Tech Department',
       'Graphic Designer',
-      'Marketing Team'
+      'Marketing Team',
+      'Video Crew'  // Added new department
     ];
 
     // Check if jsPDF is loaded
@@ -448,6 +450,16 @@
       clearTimeout(el.__hideT);
       el.__hideT = setTimeout(() => el.classList.remove('show','success','error'), 6000);
     };
+
+    // Format Aadhar number for display (XXXX XXXX XXXX)
+    function formatAadharForDisplay(aadhar) {
+      if (!aadhar) return '';
+      const clean = aadhar.replace(/\D/g, '');
+      if (clean.length === 12) {
+        return clean.replace(/(\d{4})(\d{4})(\d{4})/, '$1 $2 $3');
+      }
+      return clean;
+    }
 
     // DOM elements
     const tbody = document.getElementById('recordsTbody');
@@ -678,6 +690,7 @@
           (r.id || '').toLowerCase().includes(searchTerm) ||
           (r.full_name || '').toLowerCase().includes(searchTerm) ||
           (r.phone || '').toLowerCase().includes(searchTerm) ||
+          (r.aadhar_number || '').replace(/\s/g, '').includes(searchTerm) ||
           (r.institute || '').toLowerCase().includes(searchTerm);
         
         // Department filter (multi, AND logic, case-insensitive)
@@ -776,7 +789,7 @@
     async function loadRecords() {
       try {
         // Show loading state
-        tbody.innerHTML = '<tr><td colspan="9"><div class="loading"><div class="loading-spinner"></div></div></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10"><div class="loading"><div class="loading-spinner"></div></div></td></tr>';
         
         console.log('[Admin] Fetching records...');
         const qy = query(collection(db, 'records'), orderBy('created_at', 'desc'));
@@ -788,7 +801,7 @@
         
       } catch (err) {
         console.error('[Admin] Failed to load records:', err);
-        tbody.innerHTML = '<tr><td colspan="9">Failed to load records. Please refresh.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10">Failed to load records. Please refresh.</td></tr>';
         
         // Don't show error for temporary network issues
         if (!err.message.includes('unavailable')) {
@@ -801,7 +814,7 @@
     function renderRows(rows) {
       tbody.innerHTML = '';
       if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="9">No records found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10">No records found</td></tr>';
         return;
       }
       
@@ -813,6 +826,7 @@
           <td class="nowrap">${r.id}</td>
           <td>${escapeHtml(r.full_name)}</td>
           <td>${escapeHtml(r.phone)}</td>
+          <td class="nowrap">${formatAadharForDisplay(r.aadhar_number)}</td>
           <td>${escapeHtml(r.gender || '')}</td>
           <td>${escapeHtml(r.class || '')}</td>
           <td>${escapeHtml(r.institute)}</td>
@@ -829,7 +843,7 @@
           const expandTr = document.createElement('tr');
           expandTr.className = 'expanded-row';
           expandTr.innerHTML = `
-            <td colspan="9">
+            <td colspan="10">
               <div class="expanded-content">
                 <div class="expanded-grid">
                   <div class="expanded-item">
@@ -839,6 +853,10 @@
                   <div class="expanded-item">
                     <div class="expanded-label">Mother's Name</div>
                     <div class="expanded-value">${escapeHtml(r.mother_name || '')}</div>
+                  </div>
+                  <div class="expanded-item">
+                    <div class="expanded-label">Aadhar Number</div>
+                    <div class="expanded-value">${formatAadharForDisplay(r.aadhar_number)}</div>
                   </div>
                   <div class="expanded-item">
                     <div class="expanded-label">Date of Birth</div>
@@ -931,6 +949,7 @@
         ['Full Name', r.full_name],
         ["Father's Name", r.father_name],
         ["Mother's Name", r.mother_name],
+        ['Aadhar Number', formatAadharForDisplay(r.aadhar_number)],
         ['Gender', r.gender],
         ['DOB', r.dob],
         ['Institute', r.institute],
@@ -962,6 +981,7 @@
           ${detailRow('Full Name', r.full_name)}
           ${detailRow("Father's Name", r.father_name)}
           ${detailRow("Mother's Name", r.mother_name)}
+          ${detailRow('Aadhar Number', formatAadharForDisplay(r.aadhar_number))}
           ${detailRow('Gender', r.gender)}
           ${detailRow('DOB', r.dob)}
           ${detailRow('Institute', r.institute)}
@@ -1138,6 +1158,7 @@
           full_name: r.full_name,
           father_name: r.father_name,
           mother_name: r.mother_name,
+          aadhar_number: formatAadharForDisplay(r.aadhar_number),
           gender: r.gender,
           dob: r.dob,
           institute: r.institute,
