@@ -312,25 +312,32 @@
       <form id="registrationForm" class="form" novalidate>
         <div class="grid">
           <label class="field">
-            <span>Full Name</span>
+            <span>Full Name <span style="color:#ef4444">*</span></span>
             <input type="text" name="full_name" placeholder="Full Name" autocomplete="name" required />
             <div class="error-message">Please enter your full name</div>
           </label>
 
           <label class="field">
-            <span>Father's Name</span>
+            <span>Father's Name <span style="color:#ef4444">*</span></span>
             <input type="text" name="father_name" placeholder="Father's Name" autocomplete="additional-name" required />
             <div class="error-message">Please enter your father's name</div>
           </label>
 
           <label class="field">
-            <span>Mother's Name</span>
+            <span>Mother's Name <span style="color:#ef4444">*</span></span>
             <input type="text" name="mother_name" placeholder="Mother's Name" autocomplete="additional-name" required />
             <div class="error-message">Please enter your mother's name</div>
           </label>
 
+          <label class="field">
+            <span>Aadhar Number <span style="color:#ef4444">*</span></span>
+            <input type="text" name="aadhar_number" placeholder="12-digit Aadhar Number" autocomplete="off" 
+                   inputmode="numeric" pattern="[0-9]{12}" maxlength="12" required />
+            <div class="error-message">Please enter a valid 12-digit Aadhar number</div>
+          </label>
+
           <fieldset class="field field-inline" id="genderField">
-            <legend>Gender</legend>
+            <legend>Gender <span style="color:#ef4444">*</span></legend>
             <label class="radio"><input type="radio" name="gender" value="Male" required /> <span>Male</span></label>
             <label class="radio"><input type="radio" name="gender" value="Female" required /> <span>Female</span></label>
             <label class="radio"><input type="radio" name="gender" value="Other" required /> <span>Other</span></label>
@@ -338,19 +345,19 @@
           </fieldset>
 
           <label class="field">
-            <span>Date of Birth</span>
+            <span>Date of Birth <span style="color:#ef4444">*</span></span>
             <input type="date" name="dob" autocomplete="bday" required />
             <div class="error-message">Please select your date of birth</div>
           </label>
 
           <label class="field span-2">
-            <span>Institution / School / College name</span>
+            <span>Institution / School / College name <span style="color:#ef4444">*</span></span>
             <input type="text" name="institute" placeholder="Institution / School / College" autocomplete="organization" required />
             <div class="error-message">Please enter your institution name</div>
           </label>
 
           <label class="field">
-            <span>Class</span>
+            <span>Class <span style="color:#ef4444">*</span></span>
             <select name="class" autocomplete="education-level" required>
               <option value="" selected disabled>Select</option>
               <option>6</option>
@@ -365,30 +372,33 @@
           </label>
 
           <label class="field">
-            <span>Phone No.</span>
+            <span>Phone No. <span style="color:#ef4444">*</span></span>
             <input type="tel" name="phone" inputmode="numeric" placeholder="Enter your phone No" autocomplete="tel" required pattern="[0-9]{10}" />
             <div class="error-message">Please enter a valid 10-digit phone number</div>
           </label>
 
           <label class="field">
-            <span>Email</span>
+            <span>Email <span style="color:#ef4444">*</span></span>
             <input type="email" name="email" placeholder="Enter your Email" autocomplete="email" required />
             <div class="error-message">Please enter a valid email address</div>
           </label>
 
           <label class="field span-2">
-            <span>Address</span>
-            <input type="text" name="address" placeholder="Address" autocomplete="street-address" />
+            <span>Address <span style="color:#ef4444">*</span></span>
+            <input type="text" name="address" placeholder="Address" autocomplete="street-address" required />
+            <div class="error-message">Please enter your address</div>
           </label>
 
           <label class="field">
             <span>Landmark</span>
-            <input type="text" name="landmark" placeholder="Landmark" autocomplete="landmark" />
+            <input type="text" name="landmark" placeholder="Landmark (Optional)" autocomplete="landmark" />
+            <div class="error-message" style="display:none"></div>
           </label>
 
           <label class="field">
-            <span>City</span>
-            <input type="text" name="city" placeholder="City" autocomplete="address-level2" />
+            <span>City <span style="color:#ef4444">*</span></span>
+            <input type="text" name="city" placeholder="City" autocomplete="address-level2" required />
+            <div class="error-message">Please enter your city</div>
           </label>
 
           <label class="field span-2" data-field-type="departments">
@@ -518,6 +528,25 @@
       input.value = value;
     }
 
+    // Format Aadhar number with spaces (XXXX XXXX XXXX)
+    function formatAadharNumber(input) {
+      if (!input || !input.value) return;
+      
+      let value = input.value.replace(/\D/g, ''); // Remove non-digits
+      
+      // Format as XXXX XXXX XXXX
+      if (value.length > 0) {
+        value = value.match(/.{1,4}/g).join(' ');
+      }
+      
+      // Limit to 12 digits (plus 2 spaces)
+      if (value.length > 14) {
+        value = value.substring(0, 14);
+      }
+      
+      input.value = value;
+    }
+
     // Department management functions
     function initializeDepartmentCheckboxes() {
       const departments = [
@@ -534,7 +563,8 @@
         'Editor',
         'Tech Department',
         'Graphic Designer',
-        'Marketing Team'
+        'Marketing Team',
+        'Video Crew'  // Added new department
       ];
       
       const container = document.getElementById('departmentCheckboxes');
@@ -708,6 +738,14 @@
               field.closest('.field').classList.add('error');
               isValid = false;
             }
+          } else if (field.name === 'aadhar_number') {
+            // Aadhar validation (12 digits without spaces)
+            const aadharValue = field.value.replace(/\s/g, '');
+            const aadharRegex = /^[0-9]{12}$/;
+            if (!aadharValue || !aadharRegex.test(aadharValue)) {
+              field.closest('.field').classList.add('error');
+              isValid = false;
+            }
           } else if (field.type === 'date') {
             // Date validation
             if (!field.value) {
@@ -757,9 +795,19 @@
             if (field.name === 'institute') {
               formatInstituteName(field);
             }
+            
+            // Auto-format Aadhar number on blur
+            if (field.name === 'aadhar_number') {
+              formatAadharNumber(field);
+            }
           });
           
           field.addEventListener('input', () => {
+            // Format Aadhar number in real-time as user types
+            if (field.name === 'aadhar_number') {
+              formatAadharNumber(field);
+            }
+            
             if (field.hasAttribute('required') && field.classList.contains('error')) {
               validateField(field);
             }
@@ -800,6 +848,12 @@
         } else if (field.type === 'tel') {
           const phoneRegex = /^[0-9]{10}$/;
           if (field.value && phoneRegex.test(field.value)) {
+            fieldWrapper.classList.remove('error');
+          }
+        } else if (field.name === 'aadhar_number') {
+          const aadharValue = field.value.replace(/\s/g, '');
+          const aadharRegex = /^[0-9]{12}$/;
+          if (aadharValue && aadharRegex.test(aadharValue)) {
             fieldWrapper.classList.remove('error');
           }
         } else if (field.value && field.value.trim()) {
@@ -928,10 +982,13 @@
           };
         })();
 
-        // Function to check if email or phone already exists
-        async function checkDuplicateContact(email, phone) {
+        // Function to check if email, phone, or Aadhar already exists
+        async function checkDuplicateContact(email, phone, aadhar) {
           try {
-            console.log('Checking for duplicate contact:', { email, phone });
+            console.log('Checking for duplicate contact:', { email, phone, aadhar });
+            
+            // Clean Aadhar number (remove spaces)
+            const cleanAadhar = aadhar.replace(/\s/g, '');
             
             // Query for existing email
             const emailQuery = query(collection(db, 'records'), where('email', '==', email.toLowerCase().trim()));
@@ -941,31 +998,37 @@
             const phoneQuery = query(collection(db, 'records'), where('phone', '==', phone.trim()));
             const phoneSnapshot = await getDocs(phoneQuery);
             
+            // Query for existing Aadhar
+            const aadharQuery = query(collection(db, 'records'), where('aadhar_number', '==', cleanAadhar));
+            const aadharSnapshot = await getDocs(aadharQuery);
+            
             const results = {
               emailExists: !emailSnapshot.empty,
               phoneExists: !phoneSnapshot.empty,
+              aadharExists: !aadharSnapshot.empty,
               existingRecords: []
             };
             
-            if (results.emailExists) {
-              emailSnapshot.forEach(doc => {
+            // Collect all existing records
+            const addUniqueRecord = (doc) => {
+              if (!results.existingRecords.some(record => record.id === doc.id)) {
                 results.existingRecords.push({
                   id: doc.id,
                   ...doc.data()
                 });
-              });
+              }
+            };
+            
+            if (results.emailExists) {
+              emailSnapshot.forEach(doc => addUniqueRecord(doc));
             }
             
             if (results.phoneExists) {
-              phoneSnapshot.forEach(doc => {
-                // Avoid duplicates if same record has both matching email and phone
-                if (!results.existingRecords.some(record => record.id === doc.id)) {
-                  results.existingRecords.push({
-                    id: doc.id,
-                    ...doc.data()
-                  });
-                }
-              });
+              phoneSnapshot.forEach(doc => addUniqueRecord(doc));
+            }
+            
+            if (results.aadharExists) {
+              aadharSnapshot.forEach(doc => addUniqueRecord(doc));
             }
             
             console.log('Duplicate check results:', results);
@@ -996,6 +1059,12 @@
             formatInstituteName(instituteInput);
           }
           
+          // Auto-format Aadhar number before validation
+          const aadharInput = form.querySelector('[name="aadhar_number"]');
+          if (aadharInput) {
+            formatAadharNumber(aadharInput);
+          }
+          
           // Validate form before submission
           if (!window.validateForm(form)) {
             window.showToast('Please fill all required fields correctly.', 'error');
@@ -1018,19 +1087,30 @@
           try {
             console.log('Starting duplicate check...', data);
             
-            // Check for duplicate email or phone
-            const duplicateCheck = await checkDuplicateContact(data.email, data.phone);
+            // Clean Aadhar number (remove spaces)
+            const cleanAadhar = data.aadhar_number.replace(/\s/g, '');
             
-            if (duplicateCheck.emailExists || duplicateCheck.phoneExists) {
+            // Check for duplicate email, phone, or Aadhar
+            const duplicateCheck = await checkDuplicateContact(data.email, data.phone, cleanAadhar);
+            
+            if (duplicateCheck.emailExists || duplicateCheck.phoneExists || duplicateCheck.aadharExists) {
               let message = '';
               const existingRecord = duplicateCheck.existingRecords[0];
               
-              if (duplicateCheck.emailExists && duplicateCheck.phoneExists) {
+              if (duplicateCheck.emailExists && duplicateCheck.phoneExists && duplicateCheck.aadharExists) {
+                message = `This email, phone number, and Aadhar number are already registered. Form Number: ${existingRecord.form_number}`;
+              } else if (duplicateCheck.emailExists && duplicateCheck.phoneExists) {
                 message = `This email and phone number are already registered. Form Number: ${existingRecord.form_number}`;
+              } else if (duplicateCheck.emailExists && duplicateCheck.aadharExists) {
+                message = `This email and Aadhar number are already registered. Form Number: ${existingRecord.form_number}`;
+              } else if (duplicateCheck.phoneExists && duplicateCheck.aadharExists) {
+                message = `This phone number and Aadhar number are already registered. Form Number: ${existingRecord.form_number}`;
               } else if (duplicateCheck.emailExists) {
                 message = `This email is already registered. Form Number: ${existingRecord.form_number}`;
               } else if (duplicateCheck.phoneExists) {
                 message = `This phone number is already registered. Form Number: ${existingRecord.form_number}`;
+              } else if (duplicateCheck.aadharExists) {
+                message = `This Aadhar number is already registered. Form Number: ${existingRecord.form_number}`;
               }
               
               window.showWarning(message + '. If you need to update, please contact admin.');
@@ -1072,6 +1152,7 @@
               full_name: data.full_name || '',
               father_name: data.father_name || '',
               mother_name: data.mother_name || '',
+              aadhar_number: cleanAadhar || '', // Store cleaned Aadhar
               gender: data.gender || '',
               dob: data.dob || '',
               institute: data.institute || '',
@@ -1079,7 +1160,7 @@
               phone: data.phone.trim() || '',
               email: data.email.toLowerCase().trim() || '',
               address: data.address || '',
-              landmark: data.landmark || '',
+              landmark: data.landmark || '', // Optional field
               city: data.city || '',
               department: data.department || '',
               created_at: serverTimestamp()
@@ -1106,7 +1187,7 @@
             console.error('Form submission error:', err);
             
             if (err.message && err.message.includes('already exists') || err.message.includes('duplicate')) {
-              window.showWarning('This email or phone number is already registered. Please use different contact information.');
+              window.showWarning('This email, phone number, or Aadhar number is already registered. Please use different contact information.');
             } else {
               toast.show('Could not complete registration. Please try again.', 'error');
             }
