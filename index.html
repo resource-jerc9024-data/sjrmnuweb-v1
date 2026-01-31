@@ -332,8 +332,8 @@
           <label class="field">
             <span>Aadhar Number <span style="color:#ef4444">*</span></span>
             <input type="text" name="aadhar_number" placeholder="12-digit Aadhar Number" autocomplete="off" 
-                   inputmode="numeric" pattern="[0-9]{12}" maxlength="12" required />
-            <div class="error-message">Please enter a valid 12-digit Aadhar number</div>
+                   inputmode="numeric" maxlength="14" required />
+            <div class="error-message">Please enter a 12-digit Aadhar number</div>
           </label>
 
           <fieldset class="field field-inline" id="genderField">
@@ -738,14 +738,6 @@
               field.closest('.field').classList.add('error');
               isValid = false;
             }
-          } else if (field.name === 'aadhar_number') {
-            // Aadhar validation (12 digits without spaces)
-            const aadharValue = field.value.replace(/\s/g, '');
-            const aadharRegex = /^[0-9]{12}$/;
-            if (!aadharValue || !aadharRegex.test(aadharValue)) {
-              field.closest('.field').classList.add('error');
-              isValid = false;
-            }
           } else if (field.type === 'date') {
             // Date validation
             if (!field.value) {
@@ -765,7 +757,7 @@
               isValid = false;
             }
           } else {
-            // Text input validation
+            // Text input validation - INCLUDING AADHAR (no special validation)
             if (!field.value.trim()) {
               field.closest('.field').classList.add('error');
               isValid = false;
@@ -850,13 +842,8 @@
           if (field.value && phoneRegex.test(field.value)) {
             fieldWrapper.classList.remove('error');
           }
-        } else if (field.name === 'aadhar_number') {
-          const aadharValue = field.value.replace(/\s/g, '');
-          const aadharRegex = /^[0-9]{12}$/;
-          if (aadharValue && aadharRegex.test(aadharValue)) {
-            fieldWrapper.classList.remove('error');
-          }
         } else if (field.value && field.value.trim()) {
+          // For all other fields including Aadhar - just check if it's not empty
           fieldWrapper.classList.remove('error');
         }
       }
