@@ -886,7 +886,7 @@
         ['Landmark', record.landmark || 'Not provided'],
         ['City', record.city || 'Not provided'],
         ['Department', record.department || 'Not provided'],
-        ['Aadhar Number', record.aadhar || 'Not provided']
+        ['Aadhar Number', record.aadhar_number || 'Not provided'] // Changed from aadhar to aadhar_number
       ];
       
       entries.forEach(([key, value]) => {
@@ -929,7 +929,7 @@
       document.getElementById('edit_city').value = currentRecord.city || '';
       // Department field is populated but disabled - still set value for display
       document.getElementById('edit_department').value = currentRecord.department || '';
-      document.getElementById('edit_aadhar').value = currentRecord.aadhar || '';
+      document.getElementById('edit_aadhar').value = currentRecord.aadhar_number || ''; // Changed from aadhar to aadhar_number
       
       // Set gender radio button
       const genderRadios = document.querySelectorAll('input[name="gender"]');
@@ -989,7 +989,7 @@
           department: currentRecord.department, // Preserve original department value
           email: data.email.toLowerCase().trim(),
           phone: data.phone.trim(),
-          aadhar: data.aadhar ? data.aadhar.trim() : '',
+          aadhar_number: data.aadhar ? data.aadhar.trim() : '', // Changed from aadhar to aadhar_number
           updated_at: new Date().toISOString()
         };
         
@@ -1065,7 +1065,7 @@
         ['Landmark', record.landmark],
         ['City', record.city],
         ['Department', record.department],
-        ['Aadhar Number', record.aadhar || 'Not provided']
+        ['Aadhar Number', record.aadhar_number || 'Not provided'] // Changed from aadhar to aadhar_number
       ];
       
       for (const [key, value] of pairs) {
