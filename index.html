@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>SJR MUN Registration</title>
+  <title>SJR MUN Registration 2026 - Closed</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
@@ -289,6 +289,270 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+
+    /* 2026 Closed Status Styles - Green Theme */
+    .closed-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #9ef01a 0%, #70e000 100%);
+      color: #0b1220;
+      font-size: 0.9rem;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-left: 12px;
+      vertical-align: middle;
+      letter-spacing: 0.5px;
+      box-shadow: 0 2px 10px rgba(158, 240, 26, 0.3);
+      text-transform: uppercase;
+    }
+
+    .closed-banner {
+      background: linear-gradient(135deg, #0b1220 0%, #1a2a1a 100%);
+      border-radius: 16px;
+      padding: 32px 24px;
+      margin: 20px 0 30px 0;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      border: 1px solid rgba(158, 240, 26, 0.2);
+    }
+
+    .closed-banner::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(158, 240, 26, 0.1) 0%, transparent 50%);
+      animation: rotate 20s linear infinite;
+    }
+
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .closed-banner h2 {
+      font-size: 3.5rem;
+      font-weight: 700;
+      margin: 0 0 16px 0;
+      color: #9ef01a;
+      text-shadow: 0 2px 20px rgba(158, 240, 26, 0.3);
+      letter-spacing: 2px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .closed-banner p {
+      font-size: 1.2rem;
+      color: rgba(255, 255, 255, 0.9);
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.6;
+      position: relative;
+      z-index: 1;
+    }
+
+    .closed-banner .date-highlight {
+      background: rgba(158, 240, 26, 0.1);
+      padding: 8px 24px;
+      border-radius: 50px;
+      display: inline-block;
+      margin-top: 20px;
+      font-weight: 600;
+      backdrop-filter: blur(5px);
+      border: 1px solid rgba(158, 240, 26, 0.3);
+      position: relative;
+      z-index: 1;
+      color: #9ef01a;
+    }
+
+    .form-overlay {
+      position: relative;
+      opacity: 0.7;
+      pointer-events: none;
+      filter: blur(2px);
+      transition: all 0.3s ease;
+    }
+
+    .form-overlay:hover {
+      opacity: 0.8;
+      filter: blur(1px);
+    }
+
+    .closed-message {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(11, 18, 32, 0.95);
+      border: 2px solid #9ef01a;
+      border-radius: 20px;
+      padding: 40px 60px;
+      text-align: center;
+      z-index: 10;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      backdrop-filter: blur(10px);
+      min-width: 320px;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0% { transform: translate(-50%, -50%) translateY(0px); }
+      50% { transform: translate(-50%, -50%) translateY(-10px); }
+      100% { transform: translate(-50%, -50%) translateY(0px); }
+    }
+
+    .closed-message .year {
+      font-size: 6rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #9ef01a 0%, #70e000 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+      margin-bottom: 10px;
+      text-shadow: 0 0 30px rgba(158, 240, 26, 0.3);
+    }
+
+    .closed-message .status {
+      font-size: 2rem;
+      font-weight: 700;
+      color: white;
+      margin: 10px 0;
+      letter-spacing: 2px;
+    }
+
+    .closed-message .subtext {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 1.1rem;
+      margin: 15px 0;
+    }
+
+    .closed-message .next-year {
+      background: linear-gradient(135deg, #9ef01a 0%, #70e000 100%);
+      color: #0b1220;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 50px;
+      font-size: 1rem;
+      font-weight: 700;
+      margin-top: 20px;
+      cursor: default;
+      box-shadow: 0 4px 15px rgba(158, 240, 26, 0.4);
+      text-transform: uppercase;
+    }
+
+    /* Ensure navigation buttons remain accessible */
+    .footer-bar {
+      position: relative;
+      z-index: 20;
+    }
+
+    .social-btn {
+      pointer-events: auto !important;
+      position: relative;
+      z-index: 100;
+    }
+
+    /* Update admin button colors to match green theme */
+    .social-btn.admin {
+      border-color: #9ef01a !important;
+      color: #9ef01a !important;
+    }
+
+    .social-btn.admin:hover {
+      background: rgba(158, 240, 26, 0.1) !important;
+    }
+
+    /* Update primary button colors */
+    .btn.primary {
+      background: linear-gradient(135deg, #9ef01a 0%, #70e000 100%);
+      color: #0b1220;
+      font-weight: 700;
+    }
+
+    .btn.primary:disabled {
+      background: linear-gradient(135deg, #4a6b1a 0%, #2a4a1a 100%);
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    /* Update glow effect for title */
+    .glow-title {
+      text-shadow: 0 0 30px rgba(158, 240, 26, 0.3);
+    }
+
+    /* Update focus styles */
+    .department-checkbox input[type="checkbox"]:focus {
+      box-shadow: 0 0 0 2px rgba(158, 240, 26, 0.3);
+    }
+
+    /* Update selection counter border */
+    .selection-counter {
+      border-color: rgba(158, 240, 26, 0.2);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .closed-banner h2 {
+        font-size: 2.5rem;
+      }
+      
+      .closed-banner p {
+        font-size: 1rem;
+      }
+      
+      .closed-message {
+        padding: 30px 40px;
+        min-width: 280px;
+      }
+      
+      .closed-message .year {
+        font-size: 4rem;
+      }
+      
+      .closed-message .status {
+        font-size: 1.5rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .closed-message {
+        padding: 20px 30px;
+        min-width: 240px;
+      }
+      
+      .closed-message .year {
+        font-size: 3rem;
+      }
+      
+      .closed-message .status {
+        font-size: 1.2rem;
+      }
+    }
+
+    /* Update form field focus states */
+    input:focus, select:focus {
+      border-color: #9ef01a !important;
+      box-shadow: 0 0 0 2px rgba(158, 240, 26, 0.2) !important;
+    }
+
+    /* Update radio button colors */
+    input[type="radio"]:checked {
+      background: #9ef01a;
+      border-color: #9ef01a;
+    }
+
+    /* Update link colors */
+    .credit-link {
+      color: #9ef01a;
+    }
+
+    .credit-link:hover {
+      color: #70e000;
+    }
   </style>
 </head>
 <body>
@@ -304,61 +568,83 @@
     </section>
 
     <header class="hero" data-aos="fade-down">
-      <h1 class="title glow-title" data-aos="zoom-in">SJR MUN REGISTRATION FORM</h1>
+      <h1 class="title glow-title" data-aos="zoom-in">
+        SJR MUN REGISTRATION FORM
+        <span class="closed-badge">2026 Registrations Closed</span>
+      </h1>
     </header>
 
-    <section class="form-wrap" data-aos="fade-up" data-aos-delay="120">
+    <!-- 2026 Closed Banner - Green Theme -->
+    <section data-aos="fade-up" data-aos-delay="90">
+      <div class="closed-banner">
+        <h2>2026</h2>
+        <p>Thank you for your overwhelming response! Registrations for SJR MUN 2026 have successfully concluded.</p>
+        <div class="date-highlight">
+          <span>✨ Stay tuned for SJR MUN 2027 ✨</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="form-wrap" data-aos="fade-up" data-aos-delay="120" style="position: relative;">
+      <!-- Closed overlay message with green theme -->
+      <div class="closed-message">
+        <div class="year">2026</div>
+        <div class="status">REGISTRATIONS<br>CLOSED</div>
+        <div class="subtext">Thank you for your interest!</div>
+        <div class="next-year">See you in 2027</div>
+      </div>
+
       <h2 class="section-title">CANDIDATE DETAILS</h2>
-      <form id="registrationForm" class="form" novalidate>
+      <form id="registrationForm" class="form form-overlay" novalidate>
         <div class="grid">
           <label class="field">
             <span>Full Name <span style="color:#ef4444">*</span></span>
-            <input type="text" name="full_name" placeholder="Full Name" autocomplete="name" required />
+            <input type="text" name="full_name" placeholder="Full Name" autocomplete="name" required disabled />
             <div class="error-message">Please enter your full name</div>
           </label>
 
           <label class="field">
             <span>Father's Name <span style="color:#ef4444">*</span></span>
-            <input type="text" name="father_name" placeholder="Father's Name" autocomplete="additional-name" required />
+            <input type="text" name="father_name" placeholder="Father's Name" autocomplete="additional-name" required disabled />
             <div class="error-message">Please enter your father's name</div>
           </label>
 
           <label class="field">
             <span>Mother's Name <span style="color:#ef4444">*</span></span>
-            <input type="text" name="mother_name" placeholder="Mother's Name" autocomplete="additional-name" required />
+            <input type="text" name="mother_name" placeholder="Mother's Name" autocomplete="additional-name" required disabled />
             <div class="error-message">Please enter your mother's name</div>
           </label>
 
           <label class="field">
             <span>Aadhar Number <span style="color:#ef4444">*</span></span>
             <input type="text" name="aadhar_number" placeholder="12-digit Aadhar Number" autocomplete="off" 
-                   inputmode="numeric" maxlength="14" required />
+                   inputmode="numeric" maxlength="14" required disabled />
             <div class="error-message">Please enter a 12-digit Aadhar number</div>
           </label>
 
           <fieldset class="field field-inline" id="genderField">
             <legend>Gender <span style="color:#ef4444">*</span></legend>
-            <label class="radio"><input type="radio" name="gender" value="Male" required /> <span>Male</span></label>
-            <label class="radio"><input type="radio" name="gender" value="Female" required /> <span>Female</span></label>
-            <label class="radio"><input type="radio" name="gender" value="Other" required /> <span>Other</span></label>
+            <label class="radio"><input type="radio" name="gender" value="Male" required disabled /> <span>Male</span></label>
+            <label class="radio"><input type="radio" name="gender" value="Female" required disabled /> <span>Female</span></label>
+            <label class="radio"><input type="radio" name="gender" value="Other" required disabled /> <span>Other</span></label>
             <div class="error-message">Please select your gender</div>
           </fieldset>
 
           <label class="field">
             <span>Date of Birth <span style="color:#ef4444">*</span></span>
-            <input type="date" name="dob" autocomplete="bday" required />
+            <input type="date" name="dob" autocomplete="bday" required disabled />
             <div class="error-message">Please select your date of birth</div>
           </label>
 
           <label class="field span-2">
             <span>Institution / School / College name <span style="color:#ef4444">*</span></span>
-            <input type="text" name="institute" placeholder="Institution / School / College" autocomplete="organization" required />
+            <input type="text" name="institute" placeholder="Institution / School / College" autocomplete="organization" required disabled />
             <div class="error-message">Please enter your institution name</div>
           </label>
 
           <label class="field">
             <span>Class <span style="color:#ef4444">*</span></span>
-            <select name="class" autocomplete="education-level" required>
+            <select name="class" autocomplete="education-level" required disabled>
               <option value="" selected disabled>Select</option>
               <option>6</option>
               <option>7</option>
@@ -373,31 +659,31 @@
 
           <label class="field">
             <span>Phone No. <span style="color:#ef4444">*</span></span>
-            <input type="tel" name="phone" inputmode="numeric" placeholder="Enter your phone No" autocomplete="tel" required pattern="[0-9]{10}" />
+            <input type="tel" name="phone" inputmode="numeric" placeholder="Enter your phone No" autocomplete="tel" required pattern="[0-9]{10}" disabled />
             <div class="error-message">Please enter a valid 10-digit phone number</div>
           </label>
 
           <label class="field">
             <span>Email <span style="color:#ef4444">*</span></span>
-            <input type="email" name="email" placeholder="Enter your Email" autocomplete="email" required />
+            <input type="email" name="email" placeholder="Enter your Email" autocomplete="email" required disabled />
             <div class="error-message">Please enter a valid email address</div>
           </label>
 
           <label class="field span-2">
             <span>Address <span style="color:#ef4444">*</span></span>
-            <input type="text" name="address" placeholder="Address" autocomplete="street-address" required />
+            <input type="text" name="address" placeholder="Address" autocomplete="street-address" required disabled />
             <div class="error-message">Please enter your address</div>
           </label>
 
           <label class="field">
             <span>Landmark</span>
-            <input type="text" name="landmark" placeholder="Landmark (Optional)" autocomplete="landmark" />
+            <input type="text" name="landmark" placeholder="Landmark (Optional)" autocomplete="landmark" disabled />
             <div class="error-message" style="display:none"></div>
           </label>
 
           <label class="field">
             <span>City <span style="color:#ef4444">*</span></span>
-            <input type="text" name="city" placeholder="City" autocomplete="address-level2" required />
+            <input type="text" name="city" placeholder="City" autocomplete="address-level2" required disabled />
             <div class="error-message">Please enter your city</div>
           </label>
 
@@ -413,8 +699,8 @@
 
         <p class="slogan">"TOGETHER - STRONGER - HIGHER"</p>
         <div class="actions">
-          <button type="reset" class="btn ghost" id="resetBtn">Reset</button>
-          <button type="submit" class="btn primary" id="submitBtn">Submit</button>
+          <button type="reset" class="btn ghost" id="resetBtn" disabled>Reset</button>
+          <button type="submit" class="btn primary" id="submitBtn" disabled>Submit</button>
         </div>
       </form>
       <p class="issued">Issued by :SJR MUN CLUB</p>
@@ -434,7 +720,7 @@
           </a>
         </div>
         <div class="right" style="display:flex; gap:12px; align-items:center;">
-          <a class="social-btn admin" href="formview" aria-label="Form View" style="background:transparent; border:1px solid var(--primary); color:var(--primary); box-shadow:none;">
+          <a class="social-btn admin" href="formview" aria-label="Form View">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
               <path fill="currentColor" d="M6 2h7l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm7 1.5V8h4.5L13 3.5zM8 11h8v1.5H8V11zm0 3h8v1.5H8V14zm0 3h5v1.5H8V17z"/>
             </svg>
@@ -579,7 +865,7 @@
         const label = document.createElement('label');
         label.className = 'department-checkbox';
         label.innerHTML = `
-          <input type="checkbox" value="${dept}" />
+          <input type="checkbox" value="${dept}" disabled />
           <span>${dept}</span>
         `;
         
@@ -591,83 +877,15 @@
       counter.className = 'selection-counter';
       counter.id = 'selectionCounter';
       counter.style.opacity = '0';
+      counter.textContent = '0/2 selected';
       field.appendChild(counter);
       
-      // Add event listeners to checkboxes
+      // Disable all checkboxes since form is closed
       const checkboxes = container.querySelectorAll('input[type="checkbox"]');
       checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-          updateDepartmentSelection();
-        });
-        
-        // Add focus styles
-        checkbox.addEventListener('focus', function() {
-          this.closest('.department-checkbox').style.boxShadow = '0 0 0 2px rgba(158, 240, 26, 0.3)';
-        });
-        
-        checkbox.addEventListener('blur', function() {
-          this.closest('.department-checkbox').style.boxShadow = 'none';
-        });
+        checkbox.disabled = true;
+        checkbox.closest('.department-checkbox').classList.add('disabled');
       });
-      
-      // Function to update selection and hidden input
-      function updateDepartmentSelection() {
-        const selected = Array.from(checkboxes)
-          .filter(cb => cb.checked)
-          .map(cb => cb.value);
-        
-        // Update hidden input value (comma-separated)
-        hiddenInput.value = selected.join(', ');
-        
-        // Update selection counter
-        const counter = document.getElementById('selectionCounter');
-        if (selected.length > 0) {
-          counter.textContent = `${selected.length}/2 selected`;
-          counter.style.opacity = '1';
-        } else {
-          counter.style.opacity = '0';
-        }
-        
-        // Disable other checkboxes if 2 are selected
-        if (selected.length >= 2) {
-          checkboxes.forEach(cb => {
-            const label = cb.closest('.department-checkbox');
-            if (!cb.checked) {
-              label.classList.add('disabled');
-              cb.disabled = true;
-            } else {
-              label.classList.remove('disabled');
-              cb.disabled = false;
-            }
-          });
-        } else {
-          // Enable all checkboxes
-          checkboxes.forEach(cb => {
-            const label = cb.closest('.department-checkbox');
-            label.classList.remove('disabled');
-            cb.disabled = false;
-          });
-        }
-        
-        // Update validation
-        validateDepartmentField();
-      }
-      
-      // Initialize validation
-      updateDepartmentSelection();
-    }
-    
-    function validateDepartmentField() {
-      const hiddenInput = document.getElementById('departmentInput');
-      const field = hiddenInput.closest('.field');
-      const errorMessage = field.querySelector('.error-message');
-      
-      if (!hiddenInput.value.trim()) {
-        field.classList.add('error');
-        errorMessage.textContent = 'Please select at least one department (max 2)';
-      } else {
-        field.classList.remove('error');
-      }
     }
 
     // Form validation utility
@@ -706,146 +924,30 @@
 
       // Form validation functions
       window.validateForm = function(form) {
-        let isValid = true;
-        const fields = form.querySelectorAll('input[required], select[required], fieldset[required]');
-        
-        // Clear previous errors
-        form.querySelectorAll('.field').forEach(field => {
-          field.classList.remove('error');
-        });
-        
-        // Validate each field
-        fields.forEach(field => {
-          if (field.tagName === 'FIELDSET') {
-            // Radio button group validation
-            const radios = field.querySelectorAll('input[type="radio"]');
-            const checked = Array.from(radios).some(radio => radio.checked);
-            if (!checked) {
-              field.classList.add('error');
-              isValid = false;
-            }
-          } else if (field.type === 'email') {
-            // Email validation
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!field.value || !emailRegex.test(field.value)) {
-              field.closest('.field').classList.add('error');
-              isValid = false;
-            }
-          } else if (field.type === 'tel') {
-            // Phone validation
-            const phoneRegex = /^[0-9]{10}$/;
-            if (!field.value || !phoneRegex.test(field.value)) {
-              field.closest('.field').classList.add('error');
-              isValid = false;
-            }
-          } else if (field.type === 'date') {
-            // Date validation
-            if (!field.value) {
-              field.closest('.field').classList.add('error');
-              isValid = false;
-            }
-          } else if (field.tagName === 'SELECT') {
-            // Select validation
-            if (!field.value) {
-              field.closest('.field').classList.add('error');
-              isValid = false;
-            }
-          } else if (field.id === 'departmentInput') {
-            // Department validation (custom)
-            if (!field.value.trim()) {
-              field.closest('.field').classList.add('error');
-              isValid = false;
-            }
-          } else {
-            // Text input validation - INCLUDING AADHAR (no special validation)
-            if (!field.value.trim()) {
-              field.closest('.field').classList.add('error');
-              isValid = false;
-            }
-          }
-        });
-        
-        return isValid;
+        return false; // Form is closed
       };
 
       // Real-time validation
       window.setupRealTimeValidation = function(form) {
-        const fields = form.querySelectorAll('input, select');
-        
-        fields.forEach(field => {
-          field.addEventListener('blur', () => {
-            if (field.hasAttribute('required')) {
-              validateField(field);
-            }
-            
-            // Auto-format name fields on blur
-            if (field.name === 'full_name' || field.name === 'father_name' || field.name === 'mother_name') {
-              formatNameField(field);
-            }
-            
-            // Auto-format institute name on blur
-            if (field.name === 'institute') {
-              formatInstituteName(field);
-            }
-            
-            // Auto-format Aadhar number on blur
-            if (field.name === 'aadhar_number') {
-              formatAadharNumber(field);
-            }
-          });
-          
-          field.addEventListener('input', () => {
-            // Format Aadhar number in real-time as user types
-            if (field.name === 'aadhar_number') {
-              formatAadharNumber(field);
-            }
-            
-            if (field.hasAttribute('required') && field.classList.contains('error')) {
-              validateField(field);
-            }
-          });
-        });
-
-        // Radio button validation
-        const radioGroups = form.querySelectorAll('fieldset[required]');
-        radioGroups.forEach(group => {
-          const radios = group.querySelectorAll('input[type="radio"]');
-          radios.forEach(radio => {
-            radio.addEventListener('change', () => {
-              if (group.classList.contains('error')) {
-                group.classList.remove('error');
-              }
-            });
-          });
-        });
-        
         // Initialize department checkboxes
         initializeDepartmentCheckboxes();
+        
+        // Add disabled attribute to all form elements
+        const inputs = form.querySelectorAll('input, select, button');
+        inputs.forEach(input => {
+          input.disabled = true;
+        });
+        
+        // Disable radio buttons
+        const radios = form.querySelectorAll('input[type="radio"]');
+        radios.forEach(radio => {
+          radio.disabled = true;
+        });
       };
 
       function validateField(field) {
-        const fieldWrapper = field.closest('.field') || field;
-        
-        if (field.tagName === 'FIELDSET') {
-          const radios = field.querySelectorAll('input[type="radio"]');
-          const checked = Array.from(radios).some(radio => radio.checked);
-          if (checked) {
-            field.classList.remove('error');
-          }
-        } else if (field.type === 'email') {
-          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          if (field.value && emailRegex.test(field.value)) {
-            fieldWrapper.classList.remove('error');
-          }
-        } else if (field.type === 'tel') {
-          const phoneRegex = /^[0-9]{10}$/;
-          if (field.value && phoneRegex.test(field.value)) {
-            fieldWrapper.classList.remove('error');
-          }
-        } else if (field.value && field.value.trim()) {
-          // For all other fields including Aadhar - just check if it's not empty
-          fieldWrapper.classList.remove('error');
-        }
+        // No validation needed as form is disabled
+        return;
       }
     })();
   </script>
@@ -904,7 +1006,7 @@
   <!-- Main Firebase application - USING FIRESTORE LITE (NO EVAL) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
-    import { getFirestore, doc, setDoc, getDoc, updateDoc, serverTimestamp, increment, query, where, getDocs, collection } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore-lite.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore-lite.js";
 
     (async () => {
       try {
@@ -942,7 +1044,7 @@
         const submitBtn = document.getElementById('submitBtn');
         const resetBtn = document.getElementById('resetBtn');
         
-        // Setup real-time validation
+        // Setup real-time validation (which will disable all form elements)
         window.setupRealTimeValidation(form);
 
         const toast = (() => {
@@ -969,239 +1071,22 @@
           };
         })();
 
-        // Function to check if email, phone, or Aadhar already exists
-        async function checkDuplicateContact(email, phone, aadhar) {
-          try {
-            console.log('Checking for duplicate contact:', { email, phone, aadhar });
-            
-            // Clean Aadhar number (remove spaces)
-            const cleanAadhar = aadhar.replace(/\s/g, '');
-            
-            // Query for existing email
-            const emailQuery = query(collection(db, 'records'), where('email', '==', email.toLowerCase().trim()));
-            const emailSnapshot = await getDocs(emailQuery);
-            
-            // Query for existing phone
-            const phoneQuery = query(collection(db, 'records'), where('phone', '==', phone.trim()));
-            const phoneSnapshot = await getDocs(phoneQuery);
-            
-            // Query for existing Aadhar
-            const aadharQuery = query(collection(db, 'records'), where('aadhar_number', '==', cleanAadhar));
-            const aadharSnapshot = await getDocs(aadharQuery);
-            
-            const results = {
-              emailExists: !emailSnapshot.empty,
-              phoneExists: !phoneSnapshot.empty,
-              aadharExists: !aadharSnapshot.empty,
-              existingRecords: []
-            };
-            
-            // Collect all existing records
-            const addUniqueRecord = (doc) => {
-              if (!results.existingRecords.some(record => record.id === doc.id)) {
-                results.existingRecords.push({
-                  id: doc.id,
-                  ...doc.data()
-                });
-              }
-            };
-            
-            if (results.emailExists) {
-              emailSnapshot.forEach(doc => addUniqueRecord(doc));
-            }
-            
-            if (results.phoneExists) {
-              phoneSnapshot.forEach(doc => addUniqueRecord(doc));
-            }
-            
-            if (results.aadharExists) {
-              aadharSnapshot.forEach(doc => addUniqueRecord(doc));
-            }
-            
-            console.log('Duplicate check results:', results);
-            return results;
-            
-          } catch (error) {
-            console.error('Error checking duplicate contact:', error);
-            throw error;
-          }
-        }
-
-        // Form submission handler
+        // Form submission handler - disabled
         form?.addEventListener('submit', async (e) => {
           e.preventDefault();
-          
-          // Auto-format name fields before validation
-          const nameFields = ['full_name', 'father_name', 'mother_name'];
-          nameFields.forEach(fieldName => {
-            const input = form.querySelector(`[name="${fieldName}"]`);
-            if (input) {
-              formatNameField(input);
-            }
-          });
-          
-          // Auto-format institute name before validation
-          const instituteInput = form.querySelector('[name="institute"]');
-          if (instituteInput) {
-            formatInstituteName(instituteInput);
-          }
-          
-          // Auto-format Aadhar number before validation
-          const aadharInput = form.querySelector('[name="aadhar_number"]');
-          if (aadharInput) {
-            formatAadharNumber(aadharInput);
-          }
-          
-          // Validate form before submission
-          if (!window.validateForm(form)) {
-            window.showToast('Please fill all required fields correctly.', 'error');
-            // Scroll to first error
-            const firstError = form.querySelector('.error');
-            if (firstError) {
-              firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-            return;
-          }
-
-          // Disable submit button to prevent multiple submissions
-          submitBtn.disabled = true;
-          const originalText = submitBtn.textContent;
-          submitBtn.innerHTML = '<span class="loading-spinner"></span> Checking...';
-
-          const fd = new FormData(form);
-          const data = Object.fromEntries(fd.entries());
-
-          try {
-            console.log('Starting duplicate check...', data);
-            
-            // Clean Aadhar number (remove spaces)
-            const cleanAadhar = data.aadhar_number.replace(/\s/g, '');
-            
-            // Check for duplicate email, phone, or Aadhar
-            const duplicateCheck = await checkDuplicateContact(data.email, data.phone, cleanAadhar);
-            
-            if (duplicateCheck.emailExists || duplicateCheck.phoneExists || duplicateCheck.aadharExists) {
-              let message = '';
-              const existingRecord = duplicateCheck.existingRecords[0];
-              
-              if (duplicateCheck.emailExists && duplicateCheck.phoneExists && duplicateCheck.aadharExists) {
-                message = `This email, phone number, and Aadhar number are already registered. Form Number: ${existingRecord.form_number}`;
-              } else if (duplicateCheck.emailExists && duplicateCheck.phoneExists) {
-                message = `This email and phone number are already registered. Form Number: ${existingRecord.form_number}`;
-              } else if (duplicateCheck.emailExists && duplicateCheck.aadharExists) {
-                message = `This email and Aadhar number are already registered. Form Number: ${existingRecord.form_number}`;
-              } else if (duplicateCheck.phoneExists && duplicateCheck.aadharExists) {
-                message = `This phone number and Aadhar number are already registered. Form Number: ${existingRecord.form_number}`;
-              } else if (duplicateCheck.emailExists) {
-                message = `This email is already registered. Form Number: ${existingRecord.form_number}`;
-              } else if (duplicateCheck.phoneExists) {
-                message = `This phone number is already registered. Form Number: ${existingRecord.form_number}`;
-              } else if (duplicateCheck.aadharExists) {
-                message = `This Aadhar number is already registered. Form Number: ${existingRecord.form_number}`;
-              }
-              
-              window.showWarning(message + '. If you need to update, please contact admin.');
-              submitBtn.disabled = false;
-              submitBtn.textContent = originalText;
-              return;
-            }
-            
-            console.log('No duplicates found, proceeding with submission...');
-            
-            // Update button text for submission phase
-            submitBtn.innerHTML = '<span class="loading-spinner"></span> Submitting...';
-            
-            // Firestore Lite: use atomic increment instead of transaction
-            const counterRef = doc(db, 'meta', 'counters');
-            
-            // Ensure counter exists and get current value
-            const counterSnap = await getDoc(counterRef);
-            let current = 0;
-            if (counterSnap.exists()) {
-              current = Number(counterSnap.data().formCounter || 0);
-            } else {
-              // Create counter if it doesn't exist
-              await setDoc(counterRef, { formCounter: 0 });
-            }
-            
-            // Atomic increment (no race conditions)
-            await updateDoc(counterRef, {
-              formCounter: increment(1)
-            });
-            
-            // Get the updated value
-            const updatedSnap = await getDoc(counterRef);
-            const nextNumber = Number(updatedSnap.data().formCounter);
-
-            const formNumber = String(nextNumber).padStart(6, '0');
-            const record = {
-              form_number: formNumber,
-              full_name: data.full_name || '',
-              father_name: data.father_name || '',
-              mother_name: data.mother_name || '',
-              aadhar_number: cleanAadhar || '', // Store cleaned Aadhar
-              gender: data.gender || '',
-              dob: data.dob || '',
-              institute: data.institute || '',
-              class: data.class || '',
-              phone: data.phone.trim() || '',
-              email: data.email.toLowerCase().trim() || '',
-              address: data.address || '',
-              landmark: data.landmark || '', // Optional field
-              city: data.city || '',
-              department: data.department || '',
-              created_at: serverTimestamp()
-            };
-
-            console.log('Saving record to Firestore:', record);
-            await setDoc(doc(db, 'records', formNumber), record);
-            console.log('Record saved successfully');
-
-            toast.show(`Registration successful! Your Form Number is ${formNumber}. Save it for future reference.`, 'success');
-            form.reset();
-            
-            // Reset department checkboxes
-            const checkboxes = document.querySelectorAll('#departmentCheckboxes input[type="checkbox"]');
-            checkboxes.forEach(cb => {
-              cb.checked = false;
-              cb.disabled = false;
-              cb.closest('.department-checkbox').classList.remove('disabled');
-            });
-            document.getElementById('departmentInput').value = '';
-            document.getElementById('selectionCounter').style.opacity = '0';
-            
-          } catch (err) {
-            console.error('Form submission error:', err);
-            
-            if (err.message && err.message.includes('already exists') || err.message.includes('duplicate')) {
-              window.showWarning('This email, phone number, or Aadhar number is already registered. Please use different contact information.');
-            } else {
-              toast.show('Could not complete registration. Please try again.', 'error');
-            }
-          } finally {
-            // Re-enable submit button
-            submitBtn.disabled = false;
-            submitBtn.textContent = originalText;
-          }
+          window.showWarning('Registrations for 2026 are closed. Thank you for your interest!');
         });
 
         // Reset button handler
-        resetBtn?.addEventListener('click', () => {
-          // Clear all error states
-          form.querySelectorAll('.field').forEach(field => {
-            field.classList.remove('error');
-          });
-          
-          // Reset department checkboxes
-          const checkboxes = document.querySelectorAll('#departmentCheckboxes input[type="checkbox"]');
-          checkboxes.forEach(cb => {
-            cb.checked = false;
-            cb.disabled = false;
-            cb.closest('.department-checkbox').classList.remove('disabled');
-          });
-          document.getElementById('departmentInput').value = '';
-          document.getElementById('selectionCounter').style.opacity = '0';
+        resetBtn?.addEventListener('click', (e) => {
+          e.preventDefault();
+          window.showWarning('Registrations are closed. Form cannot be reset.');
         });
+
+        // Show a toast message on page load
+        setTimeout(() => {
+          window.showWarning('SJR MUN 2026 Registrations are now closed. Thank you for your support!');
+        }, 1000);
 
       } catch (error) {
         console.error('Critical error in module:', error);
