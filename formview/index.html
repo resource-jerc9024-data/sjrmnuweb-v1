@@ -323,6 +323,14 @@
       grid-column: span 2;
     }
     
+    /* Department field - visible but disabled */
+    .field.department-disabled input {
+      background: #1a2536;
+      color: #94a3b8;
+      cursor: not-allowed;
+      border-color: #2d3748;
+    }
+    
     .field-inline {
       display: flex;
       gap: 16px;
@@ -567,14 +575,15 @@
               <input type="text" name="city" id="edit_city" placeholder="City" />
             </label>
 
-            <label class="field span-2">
+            <!-- Department field - now visible but disabled (cannot edit) -->
+            <label class="field span-2 department-disabled">
               <span>Department</span>
-              <input type="text" name="department" id="edit_department" placeholder="Department" required />
+              <input type="text" name="department" id="edit_department" placeholder="Department" disabled />
               <div class="error-message">Please enter department</div>
             </label>
 
             <label class="field span-2">
-              <span>Aadhar Number</span>
+              <span>Aadhar Number (Optional)</span>
               <input type="text" name="aadhar" id="edit_aadhar" placeholder="12-digit Aadhar number" pattern="[0-9]{12}" inputmode="numeric" />
               <div class="error-message">Please enter valid 12-digit Aadhar number</div>
             </label>
@@ -918,6 +927,7 @@
       document.getElementById('edit_address').value = currentRecord.address || '';
       document.getElementById('edit_landmark').value = currentRecord.landmark || '';
       document.getElementById('edit_city').value = currentRecord.city || '';
+      // Department field is populated but disabled - still set value for display
       document.getElementById('edit_department').value = currentRecord.department || '';
       document.getElementById('edit_aadhar').value = currentRecord.aadhar || '';
       
@@ -931,14 +941,14 @@
     async function handleUpdateForm(e) {
       e.preventDefault();
       
-      // Validate form
+      // Validate form - department field is disabled so it won't be included in form data
       const form = e.target;
       const formData = new FormData(form);
       const data = Object.fromEntries(formData.entries());
       
-      // Basic validation
+      // Basic validation (department is excluded as it's disabled)
       if (!data.full_name || !data.father_name || !data.mother_name || !data.gender || 
-          !data.dob || !data.institute || !data.class || !data.phone || !data.email || !data.department) {
+          !data.dob || !data.institute || !data.class || !data.phone || !data.email) {
         showToast('Please fill all required fields.', 'error');
         return;
       }
@@ -972,16 +982,18 @@
           throw new Error('Database or record not available');
         }
         
+        // Keep the original department value (not updated from form since it's disabled)
         const updatedData = {
           ...currentRecord,
           ...data,
+          department: currentRecord.department, // Preserve original department value
           email: data.email.toLowerCase().trim(),
           phone: data.phone.trim(),
           aadhar: data.aadhar ? data.aadhar.trim() : '',
           updated_at: new Date().toISOString()
         };
         
-        addDebugLog(`Updating record ${currentRecord.id}`, 'info');
+        addDebugLog(`Updating record ${currentRecord.id} (department unchanged)`, 'info');
         
         const recordRef = doc(db, 'records', currentRecord.id);
         await updateDoc(recordRef, updatedData);
